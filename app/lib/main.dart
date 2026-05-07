@@ -25,7 +25,206 @@ class HaniumApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Pretendard',
       ),
-      home: const MainScreen(),
+      home: const LoginScreen(),
+    );
+  }
+}
+
+// ───────────────────────────────────────────
+// 로그인 화면
+// ───────────────────────────────────────────
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _idCtrl = TextEditingController();
+  final _pwCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _isLoading = false;
+  String? _errorMsg;
+
+  void _login() async {
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (_idCtrl.text == 'admin' && _pwCtrl.text == '1234') {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+      );
+    } else {
+      setState(() {
+        _isLoading = false;
+        _errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _idCtrl.dispose();
+    _pwCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 40),
+              // 로고 영역
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF141A2E),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFF4FC3F7).withOpacity(0.4), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4FC3F7).withOpacity(0.15),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.shield_rounded, color: Color(0xFF4FC3F7), size: 40),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Hanium Safety',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '어르신 안전 모니터링 시스템',
+                      style: TextStyle(fontSize: 13, color: Colors.white38),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 56),
+              // 아이디 입력
+              const Text('아이디', style: TextStyle(fontSize: 13, color: Colors.white54)),
+              const SizedBox(height: 8),
+              _buildTextField(
+                controller: _idCtrl,
+                hint: 'admin',
+                icon: Icons.person_outline_rounded,
+              ),
+              const SizedBox(height: 20),
+              // 비밀번호 입력
+              const Text('비밀번호', style: TextStyle(fontSize: 13, color: Colors.white54)),
+              const SizedBox(height: 8),
+              _buildTextField(
+                controller: _pwCtrl,
+                hint: '••••••••',
+                icon: Icons.lock_outline_rounded,
+                obscure: _obscure,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: Colors.white38,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              // 오류 메시지
+              if (_errorMsg != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Color(0xFFEF5350), size: 16),
+                    const SizedBox(width: 6),
+                    Text(_errorMsg!, style: const TextStyle(color: Color(0xFFEF5350), fontSize: 13)),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 32),
+              // 로그인 버튼
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4FC3F7),
+                    foregroundColor: const Color(0xFF0A0E1A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFF0A0E1A),
+                          ),
+                        )
+                      : const Text(
+                          '로그인',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    Widget? suffix,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF141A2E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1E2A45)),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        style: const TextStyle(color: Colors.white, fontSize: 15),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.white24),
+          prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+          suffixIcon: suffix,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onSubmitted: (_) => _login(),
+      ),
     );
   }
 }
