@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'firebase_options.dart';
 
 // 서버 IP를 본인 환경에 맞게 수정하세요
-const _kServerUrl = 'http://192.168.0.100:8000';
+const _kServerUrl = 'http://172.30.1.47:8000';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
 
