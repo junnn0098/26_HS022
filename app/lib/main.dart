@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'firebase_options.dart';
 
 // 서버 IP를 본인 환경에 맞게 수정하세요
@@ -61,6 +62,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await _setupFcm();
+  WsService.instance.connect();
   runApp(const HaniumApp());
 }
 
@@ -316,6 +318,64 @@ class Guardian {
   final String name;
   final String phone;
   Guardian({required this.name, required this.phone});
+}
+
+// ───────────────────────────────────────────
+// WebSocket 서비스 (싱글톤)
+// ───────────────────────────────────────────
+class WsService {
+  WsService._();
+  static final WsService instance = WsService._();
+
+  WebSocketChannel? _channel;
+  final _controller = StreamController<Map<String, dynamic>>.broadcast();
+  String _prevStatus = 'normal';
+  bool _connected = false;
+
+  Stream<Map<String, dynamic>> get stream => _controller.stream;
+
+  void connect() {
+    if (_connected) return;
+    _connected = true;
+    final uri = Uri.parse(
+      _kServerUrl.replaceFirst('http://', 'ws://') + '/ws/location',
+    );
+    _channel = WebSocketChannel.connect(uri);
+    _channel!.stream.listen(
+      _onData,
+      onError: (_) => _reconnect(),
+      onDone: () => _reconnect(),
+      cancelOnError: true,
+    );
+  }
+
+  void _onData(dynamic raw) {
+    final map = jsonDecode(raw as String) as Map<String, dynamic>;
+    AppState.personX = (map['x'] as num).toDouble();
+    AppState.personY = (map['y'] as num).toDouble();
+    AppState.status = map['status'] as String;
+
+    if (map['status'] != _prevStatus) {
+      final now = DateTime.now();
+      final t = '오늘 ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+      final msg = switch (map['status'] as String) {
+        'danger' => '낙상 의심 감지',
+        'out' => '외출 감지',
+        _ => '정상 재실 감지',
+      };
+      AppState.alerts.insert(
+        0,
+        AlertItem(type: map['status'] as String, message: msg, time: t),
+      );
+      _prevStatus = map['status'] as String;
+    }
+    _controller.add(map);
+  }
+
+  void _reconnect() {
+    _connected = false;
+    Future.delayed(const Duration(seconds: 3), connect);
+  }
 }
 
 // ───────────────────────────────────────────
@@ -664,8 +724,7 @@ class RadarScreen extends StatefulWidget {
 class _RadarScreenState extends State<RadarScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animCtrl;
-  Timer? _moveTimer;
-  final Random _rand = Random();
+  StreamSubscription? _wsSub;
 
   @override
   void initState() {
@@ -675,22 +734,15 @@ class _RadarScreenState extends State<RadarScreen>
       duration: const Duration(seconds: 3),
     )..repeat();
 
-    _moveTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
-      if (mounted) {
-        setState(() {
-          AppState.personX = (AppState.personX + (_rand.nextDouble() - 0.5) * 0.12)
-              .clamp(0.1, 0.9);
-          AppState.personY = (AppState.personY + (_rand.nextDouble() - 0.5) * 0.12)
-              .clamp(0.1, 0.9);
-        });
-      }
+    _wsSub = WsService.instance.stream.listen((_) {
+      if (mounted) setState(() {});
     });
   }
 
   @override
   void dispose() {
     _animCtrl.dispose();
-    _moveTimer?.cancel();
+    _wsSub?.cancel();
     super.dispose();
   }
 
@@ -955,8 +1007,29 @@ class RadarPainter extends CustomPainter {
 // ───────────────────────────────────────────
 // 3. 알림 화면
 // ───────────────────────────────────────────
-class AlertScreen extends StatelessWidget {
+class AlertScreen extends StatefulWidget {
   const AlertScreen({super.key});
+
+  @override
+  State<AlertScreen> createState() => _AlertScreenState();
+}
+
+class _AlertScreenState extends State<AlertScreen> {
+  StreamSubscription? _wsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _wsSub = WsService.instance.stream.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _wsSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
