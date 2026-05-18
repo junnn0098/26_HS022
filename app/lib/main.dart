@@ -295,6 +295,7 @@ class AppState {
   static String status = 'normal'; // normal | out | danger
   static double personX = 0.45;
   static double personY = 0.35;
+  static final List<Guardian> guardians = [];
   static final List<AlertItem> alerts = [
     AlertItem(type: 'normal', message: '정상 재실 감지', time: '오늘 14:32'),
     AlertItem(type: 'out', message: '외출 감지', time: '오늘 11:15'),
@@ -309,6 +310,12 @@ class AlertItem {
   final String message;
   final String time;
   AlertItem({required this.type, required this.message, required this.time});
+}
+
+class Guardian {
+  final String name;
+  final String phone;
+  Guardian({required this.name, required this.phone});
 }
 
 // ───────────────────────────────────────────
@@ -453,14 +460,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF141A2E),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF1E2A45)),
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GuardianScreen()),
           ),
-          child: const Icon(Icons.person_rounded, color: Color(0xFF4FC3F7), size: 24),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141A2E),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF1E2A45)),
+            ),
+            child: const Icon(Icons.manage_accounts_rounded, color: Color(0xFF4FC3F7), size: 24),
+          ),
         ),
       ],
     );
@@ -1056,5 +1069,251 @@ class AlertScreen extends StatelessWidget {
           'tag': '정상',
         };
     }
+  }
+}
+
+// ───────────────────────────────────────────
+// 4. 보호자 관리 화면
+// ───────────────────────────────────────────
+class GuardianScreen extends StatefulWidget {
+  const GuardianScreen({super.key});
+
+  @override
+  State<GuardianScreen> createState() => _GuardianScreenState();
+}
+
+class _GuardianScreenState extends State<GuardianScreen> {
+  bool _sending = false;
+  String? _sendResult;
+  bool _resultSuccess = false;
+
+  Future<void> _sendTestAlarm() async {
+    setState(() {
+      _sending = true;
+      _sendResult = null;
+    });
+    try {
+      final resp = await http.post(Uri.parse('$_kServerUrl/alarm/test'));
+      final data = jsonDecode(resp.body);
+      setState(() {
+        _resultSuccess = true;
+        _sendResult = '발송 완료 (수신 기기: ${data['recipients']}대)';
+      });
+    } catch (_) {
+      setState(() {
+        _resultSuccess = false;
+        _sendResult = '발송 실패: 서버에 연결할 수 없습니다.';
+      });
+    } finally {
+      setState(() => _sending = false);
+    }
+  }
+
+  void _showAddDialog() {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141A2E),
+        title: const Text('보호자 추가', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: '이름',
+                labelStyle: TextStyle(color: Colors.white54),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF1E2A45)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneCtrl,
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: '전화번호',
+                labelStyle: TextStyle(color: Colors.white54),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF1E2A45)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소', style: TextStyle(color: Colors.white38)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameCtrl.text.isNotEmpty && phoneCtrl.text.isNotEmpty) {
+                AppState.guardians.add(
+                  Guardian(name: nameCtrl.text, phone: phoneCtrl.text),
+                );
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('추가', style: TextStyle(color: Color(0xFF4FC3F7))),
+          ),
+        ],
+      ),
+    ).then((_) => setState(() {}));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0E1A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0E1A),
+        title: const Text('보호자 관리', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF141A2E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFEF5350).withOpacity(0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.notifications_active_rounded, color: Color(0xFFEF5350), size: 20),
+                      SizedBox(width: 8),
+                      Text('알람 테스트', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '앱이 설치된 모든 기기에 테스트 알람을 발송합니다.',
+                    style: TextStyle(fontSize: 13, color: Colors.white54),
+                  ),
+                  if (_sendResult != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(
+                          _resultSuccess ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
+                          color: _resultSuccess ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _sendResult!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: _resultSuccess ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: _sending ? null : _sendTestAlarm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF5350),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      icon: _sending
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.send_rounded, size: 18),
+                      label: Text(_sending ? '발송 중...' : '테스트 알람 발송'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('등록된 보호자', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: AppState.guardians.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.people_outline_rounded, color: Colors.white24, size: 48),
+                          SizedBox(height: 12),
+                          Text('등록된 보호자가 없습니다.', style: TextStyle(color: Colors.white38)),
+                          SizedBox(height: 4),
+                          Text('아래 + 버튼으로 추가하세요.', style: TextStyle(color: Colors.white24, fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: AppState.guardians.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) {
+                        final g = AppState.guardians[i];
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141A2E),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF1E2A45)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4FC3F7).withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.person_rounded, color: Color(0xFF4FC3F7), size: 20),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(g.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    const SizedBox(height: 2),
+                                    Text(g.phone, style: const TextStyle(fontSize: 13, color: Colors.white54)),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.white38),
+                                onPressed: () => setState(() => AppState.guardians.removeAt(i)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: const Color(0xFF4FC3F7),
+        child: const Icon(Icons.add, color: Color(0xFF0A0E1A)),
+      ),
+    );
   }
 }
