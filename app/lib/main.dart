@@ -9,7 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'firebase_options.dart';
 
 // 서버 IP를 본인 환경에 맞게 수정하세요
-const _kServerUrl = 'http://172.30.1.47:8000';
+const _kServerUrl = 'http://10.43.100.39:8000';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
 
