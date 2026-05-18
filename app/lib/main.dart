@@ -1,8 +1,66 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:http/http.dart' as http;
+import 'firebase_options.dart';
 
-void main() {
+// 서버 IP를 본인 환경에 맞게 수정하세요
+const _kServerUrl = 'http://192.168.0.100:8000';
+
+final _navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> _fcmBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
+
+Future<void> _setupFcm() async {
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(alert: true, badge: true, sound: true);
+
+  FirebaseMessaging.onBackgroundMessage(_fcmBackgroundHandler);
+
+  final token = await messaging.getToken();
+  if (token != null) {
+    try {
+      await http.post(
+        Uri.parse('$_kServerUrl/device/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': token}),
+      );
+    } catch (_) {}
+  }
+
+  messaging.onTokenRefresh.listen((newToken) async {
+    try {
+      await http.post(
+        Uri.parse('$_kServerUrl/device/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': newToken}),
+      );
+    } catch (_) {}
+  });
+
+  FirebaseMessaging.onMessage.listen((message) {
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null) return;
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text(message.notification?.body ?? '알림이 도착했습니다.'),
+        backgroundColor: const Color(0xFFEF5350),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  });
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await _setupFcm();
   runApp(const HaniumApp());
 }
 
@@ -12,6 +70,7 @@ class HaniumApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Hanium Safety',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
