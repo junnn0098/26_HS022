@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local mock server runtime state
+/server/dev_state.json
+/server/server.out.log
+/server/server.err.log
+/server/**/__pycache__/
+/server/**/*.pyc
+/server/.env
+/server/*serviceAccount*.json
+/server/*firebase*.json
