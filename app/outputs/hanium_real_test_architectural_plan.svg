@@ -1,0 +1,317 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <pattern id="tile" width="45" height="45" patternUnits="userSpaceOnUse">
+      <path d="M45 0H0V45" fill="none" stroke="#D2D7DE" stroke-width="0.8"/>
+    </pattern>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#9BA3AF" stroke-width="1"/>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,5 L10,0 L10,10 Z" fill="#111827"/>
+    </marker>
+    <marker id="dot" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5">
+      <circle cx="3.5" cy="3.5" r="3.5" fill="#111827"/>
+    </marker>
+    <style>
+      text { font-family: 'Malgun Gothic','Noto Sans KR','Arial',sans-serif; fill:#111827; }
+      .thin { stroke:#111827; stroke-width:1; fill:none; }
+      .mid { stroke:#111827; stroke-width:2; fill:none; }
+      .wall { stroke:#111827; stroke-width:9; fill:none; stroke-linecap:square; stroke-linejoin:miter; }
+      .innerWall { stroke:#111827; stroke-width:6; fill:none; stroke-linecap:square; stroke-linejoin:miter; }
+      .light { stroke:#6B7280; stroke-width:1; fill:none; }
+      .dim { stroke:#111827; stroke-width:1.2; fill:none; marker-start:url(#arrow); marker-end:url(#arrow); }
+      .ext { stroke:#111827; stroke-width:1; fill:none; }
+      .label { font-size:20px; font-weight:700; }
+      .room { font-size:18px; font-weight:700; }
+      .small { font-size:13px; }
+      .tiny { font-size:11px; }
+      .title { font-size:34px; font-weight:900; letter-spacing:10px; }
+      .stamp { font-size:12px; }
+      .sensor { stroke:#111827; stroke-width:2; fill:#FFFFFF; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1100" fill="#FFFFFF"/>
+
+  <!-- sheet border and title block -->
+  <rect x="24" y="20" width="1552" height="1048" class="mid"/>
+  <line x1="1330" y1="20" x2="1330" y2="1068" class="mid"/>
+  <g transform="translate(1330 20)">
+    <rect x="0" y="0" width="246" height="1048" fill="#FFFFFF"/>
+    <rect x="12" y="16" width="222" height="96" class="thin"/>
+    <text x="24" y="42" class="stamp">PROJECT</text>
+    <text x="24" y="70" class="label">HANiUM SAFETY</text>
+    <text x="24" y="94" class="small">WiFi CSI Fall Detection</text>
+
+    <rect x="12" y="132" width="222" height="96" class="thin"/>
+    <text x="24" y="158" class="stamp">DRAWING</text>
+    <text x="24" y="186" class="label">실험 환경 평면도</text>
+    <text x="24" y="210" class="small">10×18 TILE / 4.5m×8.1m</text>
+
+    <rect x="12" y="254" width="222" height="248" class="thin"/>
+    <text x="24" y="282" class="stamp">ROOM LEGEND</text>
+    <line x1="24" y1="310" x2="220" y2="310" class="light"/>
+    <text x="24" y="338" class="small">01  거실 / 보행 실험</text>
+    <text x="24" y="368" class="small">02  주방 / 장비 테이블</text>
+    <text x="24" y="398" class="small">03  침실</text>
+    <text x="24" y="428" class="small">04  욕실</text>
+    <text x="24" y="458" class="small">05  현관</text>
+    <text x="24" y="488" class="small">06  낙상 실험 구역</text>
+
+    <rect x="12" y="526" width="222" height="220" class="thin"/>
+    <text x="24" y="554" class="stamp">SENSOR LAYOUT</text>
+    <line x1="24" y1="582" x2="220" y2="582" class="light"/>
+    <circle cx="36" cy="616" r="9" class="sensor"/>
+    <text x="56" y="621" class="small">ESP32-S3 수신 노드</text>
+    <rect x="27" y="652" width="18" height="18" class="sensor"/>
+    <text x="56" y="667" class="small">ipTIME AP</text>
+    <rect x="27" y="690" width="18" height="18" fill="#111827"/>
+    <text x="56" y="705" class="small">Jetson Orin</text>
+    <line x1="27" y1="730" x2="78" y2="730" stroke="#111827" stroke-width="2" stroke-dasharray="8 7"/>
+    <text x="92" y="735" class="small">이동 경로</text>
+
+    <rect x="12" y="780" width="222" height="128" class="thin"/>
+    <text x="24" y="808" class="stamp">SCALE</text>
+    <text x="24" y="842" class="small">1 TILE = 450mm × 450mm</text>
+    <text x="24" y="872" class="small">TOTAL = 10 × 18 = 180 TILE</text>
+    <text x="24" y="902" class="small">SCALE 1 : 80</text>
+
+    <rect x="12" y="936" width="222" height="92" class="thin"/>
+    <text x="24" y="964" class="stamp">NOTE</text>
+    <text x="24" y="990" class="tiny">실제 실험장 치수를 기준으로</text>
+    <text x="24" y="1012" class="tiny">가상 주거 구조를 배치한 도면</text>
+  </g>
+
+  <!-- north symbol -->
+  <g transform="translate(92 92)">
+    <circle cx="0" cy="0" r="30" class="thin"/>
+    <line x1="0" y1="36" x2="0" y2="-48" class="mid" marker-end="url(#arrow)"/>
+    <line x1="-26" y1="26" x2="26" y2="-26" class="light"/>
+    <text x="-7" y="-58" class="label">N</text>
+  </g>
+
+  <!-- construction guide and site outline -->
+  <path d="M142 334 L430 238 L997 238 L1135 335 L1160 893 L1058 969 L316 969 L166 812 Z"
+        fill="none" stroke="#9CA3AF" stroke-width="1.4"/>
+  <path d="M95 860 L214 818 L272 1005 L115 1040" fill="none" stroke="#9CA3AF" stroke-width="1.2"/>
+  <path d="M1015 238 L1182 310 L1190 872 L1116 946" fill="none" stroke="#9CA3AF" stroke-width="1.2"/>
+
+  <!-- plan group: 10 tiles x 18 tiles; each tile 45px -->
+  <g transform="translate(332 154)">
+    <!-- outer dimensions -->
+    <line x1="0" y1="-70" x2="450" y2="-70" class="dim"/>
+    <line x1="0" y1="-45" x2="0" y2="0" class="ext"/>
+    <line x1="450" y1="-45" x2="450" y2="0" class="ext"/>
+    <text x="192" y="-84" class="small">4500</text>
+    <text x="174" y="-108" class="small">10칸 × 450mm</text>
+
+    <line x1="-76" y1="0" x2="-76" y2="810" class="dim"/>
+    <line x1="-52" y1="0" x2="0" y2="0" class="ext"/>
+    <line x1="-52" y1="810" x2="0" y2="810" class="ext"/>
+    <text x="-118" y="420" class="small" transform="rotate(-90 -118 420)">8100</text>
+    <text x="-146" y="456" class="small" transform="rotate(-90 -146 456)">18칸 × 450mm</text>
+
+    <!-- secondary dimensions -->
+    <line x1="0" y1="-34" x2="270" y2="-34" class="dim"/>
+    <line x1="270" y1="-34" x2="450" y2="-34" class="dim"/>
+    <text x="106" y="-46" class="tiny">2700</text>
+    <text x="340" y="-46" class="tiny">1800</text>
+
+    <line x1="488" y1="0" x2="488" y2="270" class="dim"/>
+    <line x1="488" y1="270" x2="488" y2="810" class="dim"/>
+    <text x="500" y="140" class="tiny" transform="rotate(90 500 140)">2700</text>
+    <text x="500" y="560" class="tiny" transform="rotate(90 500 560)">5400</text>
+
+    <!-- grid and rooms -->
+    <rect x="0" y="0" width="450" height="810" fill="url(#tile)"/>
+
+    <rect x="0" y="0" width="270" height="405" fill="#F6F6F6"/>
+    <rect x="270" y="0" width="180" height="270" fill="#FBFBFB"/>
+    <rect x="0" y="405" width="225" height="405" fill="#F8F8F8"/>
+    <rect x="225" y="405" width="112.5" height="225" fill="#F7F7F7"/>
+    <rect x="337.5" y="270" width="112.5" height="540" fill="#F5F5F5"/>
+    <rect x="225" y="630" width="112.5" height="180" fill="#FAFAFA"/>
+
+    <!-- wall hatches -->
+    <rect x="-6" y="-6" width="462" height="12" fill="url(#hatch)"/>
+    <rect x="-6" y="804" width="462" height="12" fill="url(#hatch)"/>
+    <rect x="-6" y="-6" width="12" height="822" fill="url(#hatch)"/>
+    <rect x="444" y="-6" width="12" height="822" fill="url(#hatch)"/>
+
+    <!-- walls -->
+    <rect x="0" y="0" width="450" height="810" class="wall"/>
+    <line x1="270" y1="0" x2="270" y2="405" class="innerWall"/>
+    <line x1="270" y1="270" x2="450" y2="270" class="innerWall"/>
+    <line x1="0" y1="405" x2="337.5" y2="405" class="innerWall"/>
+    <line x1="225" y1="405" x2="225" y2="810" class="innerWall"/>
+    <line x1="337.5" y1="270" x2="337.5" y2="810" class="innerWall"/>
+    <line x1="225" y1="630" x2="337.5" y2="630" class="innerWall"/>
+
+    <!-- door gaps and door swings -->
+    <rect x="252" y="292" width="36" height="78" fill="#FFFFFF"/>
+    <path d="M252 370 A78 78 0 0 1 288 300" class="door"/>
+    <rect x="318" y="472" width="39" height="78" fill="#FFFFFF"/>
+    <path d="M318 550 A78 78 0 0 1 356 480" class="door"/>
+    <rect x="316" y="694" width="41" height="78" fill="#FFFFFF"/>
+    <path d="M316 772 A78 78 0 0 1 356 702" class="door"/>
+    <rect x="382" y="270" width="46" height="10" fill="#FFFFFF"/>
+    <path d="M382 270 A56 56 0 0 0 428 326" class="door"/>
+
+    <!-- windows -->
+    <line x1="44" y1="-8" x2="206" y2="-8" stroke="#FFFFFF" stroke-width="8"/>
+    <line x1="44" y1="-16" x2="206" y2="-16" class="thin"/>
+    <line x1="44" y1="-1" x2="206" y2="-1" class="thin"/>
+    <line x1="306" y1="-8" x2="424" y2="-8" stroke="#FFFFFF" stroke-width="8"/>
+    <line x1="306" y1="-16" x2="424" y2="-16" class="thin"/>
+    <line x1="306" y1="-1" x2="424" y2="-1" class="thin"/>
+    <line x1="452" y1="345" x2="452" y2="495" stroke="#FFFFFF" stroke-width="8"/>
+    <line x1="460" y1="345" x2="460" y2="495" class="thin"/>
+    <line x1="445" y1="345" x2="445" y2="495" class="thin"/>
+    <line x1="50" y1="812" x2="184" y2="812" stroke="#FFFFFF" stroke-width="8"/>
+    <line x1="50" y1="820" x2="184" y2="820" class="thin"/>
+    <line x1="50" y1="805" x2="184" y2="805" class="thin"/>
+
+    <!-- furniture symbols -->
+    <g opacity="0.9">
+      <!-- living sofa set -->
+      <g>
+        <rect x="34" y="58" width="112" height="54" rx="10" class="thin"/>
+        <rect x="42" y="66" width="96" height="24" rx="6" class="light"/>
+        <line x1="70" y1="66" x2="70" y2="90" class="light"/>
+        <line x1="110" y1="66" x2="110" y2="90" class="light"/>
+        <rect x="28" y="78" width="10" height="22" rx="3" class="thin"/>
+        <rect x="142" y="78" width="10" height="22" rx="3" class="thin"/>
+        <line x1="42" y1="104" x2="138" y2="104" class="light"/>
+      </g>
+
+      <!-- living dining/table used as movement obstacle -->
+      <g>
+        <rect x="62" y="188" width="124" height="80" rx="10" class="thin"/>
+        <rect x="78" y="204" width="92" height="48" rx="8" class="light"/>
+        <circle cx="46" cy="228" r="15" class="thin"/>
+        <circle cx="202" cy="228" r="15" class="thin"/>
+        <circle cx="102" cy="178" r="13" class="thin"/>
+        <circle cx="146" cy="178" r="13" class="thin"/>
+        <circle cx="102" cy="278" r="13" class="thin"/>
+        <circle cx="146" cy="278" r="13" class="thin"/>
+      </g>
+
+      <!-- long shelf / sofa on living wall -->
+      <g>
+        <rect x="204" y="70" width="42" height="184" rx="8" class="thin"/>
+        <line x1="204" y1="110" x2="246" y2="110" class="light"/>
+        <line x1="204" y1="150" x2="246" y2="150" class="light"/>
+        <line x1="204" y1="190" x2="246" y2="190" class="light"/>
+      </g>
+
+      <!-- kitchen counter: sink, stove, refrigerator -->
+      <g>
+        <rect x="304" y="34" width="112" height="92" class="thin"/>
+        <line x1="304" y1="80" x2="416" y2="80" class="light"/>
+        <rect x="316" y="48" width="38" height="24" rx="5" class="thin"/>
+        <path d="M323 60 C332 52, 340 52, 348 60" class="light"/>
+        <circle cx="382" cy="60" r="13" class="thin"/>
+        <circle cx="398" cy="60" r="7" class="light"/>
+        <rect x="344" y="88" width="58" height="28" rx="4" class="light"/>
+        <text x="318" y="108" class="tiny">K</text>
+
+        <rect x="302" y="170" width="132" height="54" class="thin"/>
+        <line x1="346" y1="170" x2="346" y2="224" class="light"/>
+        <line x1="390" y1="170" x2="390" y2="224" class="light"/>
+        <circle cx="324" cy="197" r="13" class="thin"/>
+        <circle cx="368" cy="197" r="13" class="thin"/>
+        <circle cx="412" cy="197" r="13" class="thin"/>
+      </g>
+
+      <!-- bedroom bed, pillow, side cabinet -->
+      <g>
+        <rect x="38" y="522" width="158" height="146" rx="10" class="thin"/>
+        <rect x="50" y="534" width="60" height="44" rx="7" class="light"/>
+        <rect x="124" y="534" width="60" height="44" rx="7" class="light"/>
+        <line x1="38" y1="590" x2="196" y2="590" class="light"/>
+        <line x1="50" y1="626" x2="184" y2="626" class="light"/>
+        <rect x="202" y="458" width="34" height="184" rx="6" class="thin"/>
+        <line x1="202" y1="500" x2="236" y2="500" class="light"/>
+        <line x1="202" y1="542" x2="236" y2="542" class="light"/>
+        <line x1="202" y1="584" x2="236" y2="584" class="light"/>
+      </g>
+
+      <!-- bathroom: shower booth, toilet, sink -->
+      <g>
+        <rect x="256" y="464" width="48" height="140" rx="9" class="thin"/>
+        <ellipse cx="280" cy="532" rx="20" ry="25" class="thin"/>
+        <line x1="262" y1="474" x2="298" y2="506" class="light"/>
+        <circle cx="268" cy="482" r="4" fill="#111827"/>
+
+        <rect x="308" y="428" width="28" height="50" rx="5" class="thin"/>
+        <ellipse cx="322" cy="452" rx="10" ry="14" class="light"/>
+
+        <rect x="304" y="584" width="28" height="42" rx="5" class="thin"/>
+        <path d="M309 598 C318 588, 328 588, 333 598" class="light"/>
+      </g>
+
+      <!-- entrance storage / shoe cabinet -->
+      <g>
+        <rect x="382" y="370" width="52" height="138" rx="8" class="thin"/>
+        <line x1="408" y1="370" x2="408" y2="508" class="light"/>
+        <line x1="382" y1="416" x2="434" y2="416" class="light"/>
+        <line x1="382" y1="462" x2="434" y2="462" class="light"/>
+        <path d="M386 394 q10 -8 20 0" class="light"/>
+        <path d="M412 394 q10 -8 20 0" class="light"/>
+      </g>
+
+      <!-- fall mat / safety mat -->
+      <g>
+        <rect x="250" y="684" width="58" height="92" rx="9" class="thin"/>
+        <line x1="250" y1="730" x2="308" y2="730" class="light"/>
+        <line x1="260" y1="694" x2="298" y2="766" class="light"/>
+        <line x1="298" y1="694" x2="260" y2="766" class="light"/>
+      </g>
+    </g>
+
+    <!-- room labels -->
+    <text x="24" y="36" class="room">거실 / 보행 실험</text>
+    <text x="296" y="36" class="room">주방</text>
+    <text x="24" y="441" class="room">침실</text>
+    <text x="246" y="441" class="room">욕실</text>
+    <text x="372" y="314" class="room">현관</text>
+    <text x="244" y="668" class="room">낙상 구역</text>
+
+    <!-- sensors / devices -->
+    <g>
+      <circle cx="0" cy="0" r="18" class="sensor"/>
+      <circle cx="450" cy="0" r="18" class="sensor"/>
+      <circle cx="0" cy="810" r="18" class="sensor"/>
+      <circle cx="450" cy="810" r="18" class="sensor"/>
+      <text x="-46" y="-24" class="tiny">ESP1</text>
+      <text x="464" y="-24" class="tiny">ESP2</text>
+      <text x="-46" y="842" class="tiny">ESP3</text>
+      <text x="464" y="842" class="tiny">ESP4</text>
+
+      <rect x="310" y="112" width="24" height="24" class="sensor"/>
+      <text x="340" y="130" class="tiny">ipTIME AP</text>
+      <rect x="370" y="172" width="28" height="24" fill="#111827"/>
+      <text x="404" y="190" class="tiny">Jetson</text>
+    </g>
+
+    <!-- movement path -->
+    <path d="M122 224 C162 300 200 382 238 460 C282 552 286 638 282 728"
+          fill="none" stroke="#111827" stroke-width="2.4" stroke-dasharray="10 8"/>
+    <circle cx="282" cy="728" r="18" class="thin"/>
+    <path d="M282 710v40 M266 724l16-8 17 8 M274 770l8-20 10 20" class="mid"/>
+    <text x="300" y="724" class="tiny">현재 위치</text>
+
+    <!-- tile count annotations -->
+    <text x="20" y="790" class="tiny">GRID: 10 × 18 / 180 TILE</text>
+    <text x="20" y="773" class="tiny">1 TILE: 450mm × 450mm</text>
+  </g>
+
+  <!-- lower title -->
+  <g transform="translate(548 1038)">
+    <circle cx="-48" cy="-8" r="20" class="thin"/>
+    <text x="-54" y="-2" class="small">1</text>
+    <line x1="-18" y1="-8" x2="276" y2="-8" class="mid"/>
+    <text x="8" y="-26" style="font-size:28px;font-weight:900;letter-spacing:8px;">실 험 환 경 평 면 도</text>
+    <text x="106" y="20" class="small">SCALE 1 / 80</text>
+  </g>
+</svg>

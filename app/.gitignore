@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.codex_dart_appdata/
+.codex_localappdata/
 
 # Symbolication related
 app.*.symbols
@@ -53,3 +55,6 @@ app.*.map.json
 /server/.env
 /server/*serviceAccount*.json
 /server/*firebase*.json
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk*.json

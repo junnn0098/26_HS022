@@ -1,0 +1,224 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="980" viewBox="0 0 768 980">
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#15213B" flood-opacity="0.12"/>
+    </filter>
+    <filter id="smallShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#15213B" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F8FBFF"/>
+    </linearGradient>
+    <linearGradient id="wallStroke" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#283242"/>
+      <stop offset="1" stop-color="#1D2635"/>
+    </linearGradient>
+    <pattern id="woodGrid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M0 36H36M36 0V36" fill="none" stroke="#CBBFA8" stroke-opacity="0.22" stroke-width="1"/>
+    </pattern>
+    <pattern id="tileGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M0 32H32M32 0V32" fill="none" stroke="#A9BED1" stroke-opacity="0.26" stroke-width="1"/>
+    </pattern>
+    <style>
+      text{font-family:'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif}
+      .label{fill:#162033;font-size:22px;font-weight:900}
+      .small{fill:#64748B;font-size:14px;font-weight:800}
+      .room{fill:#172033;font-size:21px;font-weight:900}
+      .wall{fill:none;stroke:url(#wallStroke);stroke-width:8;stroke-linejoin:round;stroke-linecap:square}
+      .inner{fill:none;stroke:#263142;stroke-width:6;stroke-linejoin:round;stroke-linecap:square}
+      .thin{fill:none;stroke:#8C9AAD;stroke-width:2;stroke-linejoin:round}
+      .furn{stroke:#A5B0BF;stroke-width:2;fill-opacity:.96}
+    </style>
+  </defs>
+
+  <rect width="768" height="980" rx="52" fill="#F3F6FB"/>
+  <rect x="42" y="44" width="684" height="892" rx="48" fill="url(#cardBg)" filter="url(#softShadow)"/>
+  <rect x="62" y="64" width="644" height="852" rx="40" fill="#FFFFFF" stroke="#E5ECF5" stroke-width="2"/>
+
+  <g transform="translate(137 86)">
+    <rect x="-26" y="-26" width="502" height="842" rx="34" fill="#F8FAFF" stroke="#E3EAF3" stroke-width="2"/>
+
+    <!-- room fills: 10 x 18 tile structure, app scale 44px -->
+    <rect x="0" y="0" width="440" height="792" rx="7" fill="#F9FBFF"/>
+    <rect x="0" y="0" width="220" height="220" fill="#EFE4D2"/>
+    <rect x="220" y="0" width="220" height="220" fill="#FFF0C7"/>
+    <rect x="0" y="220" width="293" height="220" fill="#E7F4EF"/>
+    <rect x="293" y="220" width="147" height="220" fill="#DDF2F7"/>
+    <rect x="0" y="440" width="264" height="352" fill="#DDEBFF"/>
+    <rect x="264" y="440" width="176" height="176" fill="#F0F5FF"/>
+    <rect x="264" y="616" width="176" height="176" fill="#EAD6F1"/>
+
+    <!-- texture overlays -->
+    <rect x="0" y="0" width="220" height="220" fill="url(#woodGrid)" opacity=".75"/>
+    <rect x="220" y="0" width="220" height="220" fill="url(#woodGrid)" opacity=".75"/>
+    <rect x="0" y="440" width="264" height="352" fill="url(#tileGrid)" opacity=".40"/>
+    <rect x="293" y="220" width="147" height="220" fill="url(#tileGrid)" opacity=".48"/>
+    <rect x="264" y="616" width="176" height="176" fill="url(#tileGrid)" opacity=".32"/>
+
+    <!-- subtle room depth -->
+    <rect x="0" y="0" width="440" height="792" rx="7" fill="none" stroke="#DCE5EF" stroke-width="12" opacity=".5"/>
+
+    <!-- walls -->
+    <rect x="0" y="0" width="440" height="792" class="wall"/>
+    <path d="M220 0V220" class="inner"/>
+    <path d="M0 220H440" class="inner"/>
+    <path d="M293 220V440" class="inner"/>
+    <path d="M0 440H440" class="inner"/>
+    <path d="M264 440V792" class="inner"/>
+    <path d="M264 616H440" class="inner"/>
+
+    <!-- door openings and arcs -->
+    <g>
+      <rect x="199" y="186" width="48" height="58" fill="#FFFFFF"/>
+      <path d="M199 244A58 58 0 0 1 247 190" class="thin"/>
+      <rect x="268" y="404" width="62" height="62" fill="#FFFFFF"/>
+      <path d="M268 466A62 62 0 0 1 330 406" class="thin"/>
+      <rect x="326" y="404" width="64" height="62" fill="#FFFFFF"/>
+      <path d="M390 466A62 62 0 0 0 328 406" class="thin"/>
+      <rect x="323" y="600" width="70" height="38" fill="#FFFFFF"/>
+      <path d="M323 638A64 64 0 0 1 393 604" class="thin"/>
+      <rect x="270" y="716" width="64" height="70" fill="#FFFFFF"/>
+      <path d="M270 786A70 70 0 0 1 334 724" class="thin"/>
+    </g>
+
+    <!-- windows -->
+    <g stroke-linecap="round">
+      <path d="M48 -7H176" stroke="#EAF6FF" stroke-width="12"/>
+      <path d="M48 -15H176M48 1H176" class="thin"/>
+      <path d="M268 -7H410" stroke="#EAF6FF" stroke-width="12"/>
+      <path d="M268 -15H410M268 1H410" class="thin"/>
+      <path d="M447 278V392" stroke="#EAF6FF" stroke-width="12"/>
+      <path d="M439 278V392M455 278V392" class="thin"/>
+      <path d="M50 799H180" stroke="#EAF6FF" stroke-width="12"/>
+      <path d="M50 791H180M50 807H180" class="thin"/>
+    </g>
+
+    <!-- furniture -->
+    <g filter="url(#smallShadow)">
+      <!-- bedroom 2: bed, desk, wardrobe -->
+      <g>
+        <rect x="34" y="42" width="132" height="92" rx="13" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <rect x="43" y="52" width="58" height="34" rx="8" fill="#EEF5FF" stroke="#AAB8CA" stroke-width="1.5"/>
+        <rect x="108" y="52" width="46" height="34" rx="8" fill="#EEF5FF" stroke="#AAB8CA" stroke-width="1.5"/>
+        <path d="M34 93H166" stroke="#AAB8CA" stroke-width="2"/>
+        <path d="M48 114H152" stroke="#C4CEDA" stroke-width="2"/>
+        <rect x="175" y="42" width="29" height="130" rx="7" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <path d="M175 84H204M175 126H204" stroke="#C5CEDA" stroke-width="1.6"/>
+        <rect x="43" y="152" width="94" height="34" rx="5" fill="#FFF8EA" stroke="#A99A7C" stroke-width="2"/>
+        <rect x="53" y="159" width="34" height="20" rx="4" fill="#FFFFFF" stroke="#C5B68D" stroke-width="1.4"/>
+        <circle cx="151" cy="169" r="12" fill="#FFFFFF" stroke="#A99A7C" stroke-width="1.5"/>
+      </g>
+
+      <!-- kitchen: counter, sink, cooktop, fridge, dining set -->
+      <g>
+        <rect x="250" y="30" width="164" height="64" rx="5" fill="#FFF7E5" stroke="#A99A7C" stroke-width="2"/>
+        <path d="M304 30V94M358 30V94" stroke="#D0BF94" stroke-width="1.7"/>
+        <rect x="262" y="47" width="35" height="25" rx="6" fill="#FFFFFF" stroke="#A99A7C" stroke-width="1.5"/>
+        <circle cx="329" cy="55" r="8" fill="#FFFDF4" stroke="#AD9B76" stroke-width="1.4"/>
+        <circle cx="350" cy="55" r="8" fill="#FFFDF4" stroke="#AD9B76" stroke-width="1.4"/>
+        <circle cx="329" cy="76" r="8" fill="#FFFDF4" stroke="#AD9B76" stroke-width="1.4"/>
+        <circle cx="350" cy="76" r="8" fill="#FFFDF4" stroke="#AD9B76" stroke-width="1.4"/>
+        <rect x="388" y="106" width="31" height="72" rx="7" fill="#F7FAFF" stroke="#A99A7C" stroke-width="2"/>
+        <path d="M388 132H419" stroke="#C9B98E" stroke-width="1.5"/>
+        <rect x="281" y="122" width="92" height="58" rx="12" fill="#FFF7E4" stroke="#A99A7C" stroke-width="2"/>
+        <circle cx="279" cy="151" r="13" fill="#FFFFFF" stroke="#AD9B76" stroke-width="1.5"/>
+        <circle cx="375" cy="151" r="13" fill="#FFFFFF" stroke="#AD9B76" stroke-width="1.5"/>
+        <circle cx="327" cy="106" r="12" fill="#FFFFFF" stroke="#AD9B76" stroke-width="1.5"/>
+      </g>
+
+      <!-- living: sofa, side chairs, coffee table, TV console -->
+      <g>
+        <rect x="40" y="266" width="123" height="63" rx="16" fill="#ADC2B4"/>
+        <rect x="51" y="277" width="101" height="29" rx="9" fill="#C3D5CA"/>
+        <rect x="33" y="281" width="22" height="36" rx="10" fill="#9EB7AA"/>
+        <rect x="148" y="281" width="22" height="36" rx="10" fill="#9EB7AA"/>
+        <path d="M84 277V306M118 277V306" stroke="#F2FAF6" stroke-width="2"/>
+        <rect x="187" y="302" width="76" height="48" rx="12" fill="#F7FAFF" stroke="#8FA0B4" stroke-width="2"/>
+        <path d="M196 326H254" stroke="#C0CAD8" stroke-width="1.6"/>
+        <circle cx="197" cy="263" r="13" fill="#FFFFFF" stroke="#8FA0B4" stroke-width="1.5"/>
+        <circle cx="247" cy="263" r="13" fill="#FFFFFF" stroke="#8FA0B4" stroke-width="1.5"/>
+        <rect x="38" y="396" width="180" height="28" rx="4" fill="#F8FAFC" stroke="#8FA0B4" stroke-width="2"/>
+        <rect x="74" y="401" width="108" height="5" rx="2.5" fill="#B8C4D2"/>
+      </g>
+
+      <!-- bathroom: bathtub, toilet, basin, cabinet -->
+      <g>
+        <rect x="326" y="272" width="48" height="120" rx="12" fill="#F9FEFF" stroke="#7FA6B0" stroke-width="2"/>
+        <ellipse cx="350" cy="331" rx="19" ry="25" fill="#FFFFFF" stroke="#7FA6B0" stroke-width="2"/>
+        <path d="M333 285L366 317" stroke="#A8CBD3" stroke-width="2"/>
+        <circle cx="339" cy="293" r="4" fill="#7FA6B0"/>
+        <rect x="395" y="260" width="31" height="51" rx="8" fill="#F9FEFF" stroke="#7FA6B0" stroke-width="2"/>
+        <ellipse cx="410.5" cy="284.5" rx="10" ry="14" fill="#FFFFFF" stroke="#A8CBD3" stroke-width="1.5"/>
+        <rect x="396" y="363" width="31" height="42" rx="7" fill="#F9FEFF" stroke="#7FA6B0" stroke-width="2"/>
+        <path d="M402 374H421M402 384H421" stroke="#B9D5DB" stroke-width="1.5"/>
+      </g>
+
+      <!-- bedroom 1: double bed, wardrobe, nightstands -->
+      <g>
+        <rect x="38" y="548" width="174" height="152" rx="15" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <rect x="50" y="560" width="62" height="44" rx="9" fill="#EEF5FF" stroke="#AAB8CA" stroke-width="1.5"/>
+        <rect x="132" y="560" width="62" height="44" rx="9" fill="#EEF5FF" stroke="#AAB8CA" stroke-width="1.5"/>
+        <path d="M38 616H212" stroke="#AAB8CA" stroke-width="2"/>
+        <path d="M55 655H195" stroke="#B8C4D2" stroke-width="2"/>
+        <path d="M55 672H195" stroke="#D1D9E4" stroke-width="1.5"/>
+        <rect x="220" y="492" width="36" height="198" rx="8" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <path d="M220 538H256M220 584H256M220 630H256" stroke="#B8C4D2" stroke-width="1.6"/>
+        <rect x="28" y="618" width="20" height="28" rx="4" fill="#F9FBFF" stroke="#AAB8CA" stroke-width="1.4"/>
+        <rect x="202" y="618" width="20" height="28" rx="4" fill="#F9FBFF" stroke="#AAB8CA" stroke-width="1.4"/>
+      </g>
+
+      <!-- entrance: shoe cabinet, coat hooks, mirror, small bench -->
+      <g>
+        <rect x="314" y="682" width="98" height="36" rx="4" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <path d="M347 682V718M380 682V718" stroke="#B8C4D2" stroke-width="1.6"/>
+        <circle cx="332" cy="732" r="5" fill="#A9B5C5"/>
+        <circle cx="359" cy="732" r="5" fill="#A9B5C5"/>
+        <circle cx="386" cy="732" r="5" fill="#A9B5C5"/>
+        <path d="M320 752q16 -11 32 0M367 752q16 -11 32 0" stroke="#8FA0B4" stroke-width="2" fill="none"/>
+        <rect x="390" y="755" width="39" height="35" rx="4" fill="#F9FBFF" stroke="#8FA0B4" stroke-width="2"/>
+        <path d="M399 764H420M399 773H420" stroke="#B8C4D2" stroke-width="1.5"/>
+      </g>
+    </g>
+
+    <!-- labels -->
+    <text x="22" y="34" class="room">침실-2</text>
+    <text x="244" y="34" class="room">주방</text>
+    <text x="22" y="257" class="room">거실</text>
+    <text x="322" y="257" class="room">욕실</text>
+    <text x="22" y="486" class="room">침실-1</text>
+    <text x="306" y="672" class="room">현관</text>
+
+    <!-- sensors -->
+    <g>
+      <circle cx="0" cy="0" r="22" fill="#D8F8EA"/>
+      <circle cx="0" cy="0" r="11" fill="#2EC48D"/>
+      <circle cx="0" cy="0" r="5" fill="#FFFFFF"/>
+      <circle cx="440" cy="0" r="22" fill="#D8F8EA"/>
+      <circle cx="440" cy="0" r="11" fill="#2EC48D"/>
+      <circle cx="440" cy="0" r="5" fill="#FFFFFF"/>
+      <circle cx="0" cy="792" r="22" fill="#D8F8EA"/>
+      <circle cx="0" cy="792" r="11" fill="#2EC48D"/>
+      <circle cx="0" cy="792" r="5" fill="#FFFFFF"/>
+      <circle cx="440" cy="792" r="22" fill="#D8F8EA"/>
+      <circle cx="440" cy="792" r="11" fill="#2EC48D"/>
+      <circle cx="440" cy="792" r="5" fill="#FFFFFF"/>
+    </g>
+
+    <!-- actual router position -->
+    <g transform="translate(292 700)" filter="url(#smallShadow)">
+      <rect x="-14" y="-14" width="112" height="42" rx="21" fill="#FFFFFF" stroke="#E6ECF5" stroke-width="2"/>
+      <circle cx="7" cy="7" r="14" fill="#EEF6FF"/>
+      <path d="M0 8C5 2 10 2 15 8M3 12C7 8 10 8 13 12" fill="none" stroke="#5B6BFF" stroke-width="2" stroke-linecap="round"/>
+      <text x="30" y="13" fill="#243044" font-size="13" font-weight="900">ipTIME AP</text>
+    </g>
+  </g>
+
+  <g transform="translate(214 905)">
+    <rect x="0" y="0" width="340" height="42" rx="21" fill="#FFFFFF" stroke="#E5ECF5" stroke-width="2"/>
+    <circle cx="34" cy="21" r="6" fill="#2EC48D"/>
+    <text x="48" y="26" class="small">ESP32-S3 수신 노드</text>
+    <circle cx="194" cy="21" r="6" fill="#5B6BFF"/>
+    <text x="208" y="26" class="small">실제 AP 위치</text>
+  </g>
+</svg>

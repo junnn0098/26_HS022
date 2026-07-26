@@ -1,15 +1,20 @@
 const http = require("http");
+const https = require("https");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
 const configuredPort = Number(process.env.PORT || 8000);
 const PORT = Number.isFinite(configuredPort) ? configuredPort : 8000;
+const REAL_SENSOR_ONLY = String(process.env.REAL_SENSOR_ONLY || "")
+  .trim()
+  .toLowerCase() === "true";
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const STATE_FILE = path.join(__dirname, "dev_state.json");
 
 const defaultState = {
   tokens: [],
+  deviceTokens: [],
   guardians: [
     { id: 1, name: "김영희 어르신", phone: "010-0000-0000", role: "보호 대상" },
     { id: 2, name: "김주환 보호자", phone: "010-1234-5678", role: "1순위 보호자" },
@@ -21,6 +26,7 @@ const defaultState = {
     intrusionDetection: true,
     showPath: true,
     showSensors: true,
+    locationSharingEnabled: true,
     miniatureSize: "medium",
   },
   emergencyInfo: {
@@ -58,12 +64,65 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeDeviceRole(value) {
+  const role = String(value || "guardian").trim();
+  if (role === "careRecipient" || role === "care_recipient" || role === "recipient") {
+    return "careRecipient";
+  }
+  if (role.includes("피보호") || role.includes("대상")) {
+    return "careRecipient";
+  }
+  return "guardian";
+}
+
+function normalizeDeviceTokens(deviceTokens, legacyTokens = []) {
+  const byToken = new Map();
+
+  function add(token, role) {
+    const cleanToken = typeof token === "string" ? token.trim() : "";
+    if (!cleanToken) return;
+    const cleanRole = normalizeDeviceRole(role);
+    const current =
+      byToken.get(cleanToken) || {
+        token: cleanToken,
+        roles: [],
+        lastRole: cleanRole,
+        updatedAt: new Date().toISOString(),
+      };
+    if (!current.roles.includes(cleanRole)) current.roles.push(cleanRole);
+    current.lastRole = cleanRole;
+    byToken.set(cleanToken, current);
+  }
+
+  if (Array.isArray(deviceTokens)) {
+    for (const item of deviceTokens) {
+      if (typeof item === "string") {
+        add(item, "guardian");
+        continue;
+      }
+      if (!item || typeof item !== "object") continue;
+      const roles = Array.isArray(item.roles) ? item.roles : [item.role || item.lastRole];
+      for (const role of roles) add(item.token, role);
+    }
+  }
+
+  if (Array.isArray(legacyTokens)) {
+    for (const token of legacyTokens) add(token, "guardian");
+  }
+
+  return [...byToken.values()];
+}
+
 function loadState() {
   try {
     if (!fs.existsSync(STATE_FILE)) return defaultState;
     const saved = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const legacyTokens = Array.isArray(saved.tokens)
+      ? saved.tokens
+      : defaultState.tokens;
     return {
-      tokens: Array.isArray(saved.tokens) ? saved.tokens : defaultState.tokens,
+      tokens: legacyTokens,
+      deviceTokens: normalizeDeviceTokens(saved.deviceTokens, legacyTokens),
       guardians: Array.isArray(saved.guardians)
         ? saved.guardians
         : defaultState.guardians,
@@ -82,6 +141,7 @@ function loadState() {
 
 let state = loadState();
 let tokens = state.tokens;
+let deviceTokens = normalizeDeviceTokens(state.deviceTokens, tokens);
 let guardians = state.guardians;
 let settings = state.settings;
 let emergencyInfo = state.emergencyInfo;
@@ -91,9 +151,70 @@ let latestLocation = null;
 let manualSensorUntil = 0;
 const wsClients = new Set();
 
+function allRegisteredTokens() {
+  return [
+    ...new Set([
+      ...tokens,
+      ...deviceTokens.map((device) => device.token),
+    ]),
+  ].filter(Boolean);
+}
+
+function recipientTokens(targetRole = "guardian") {
+  const role = normalizeDeviceRole(targetRole);
+  const matching = deviceTokens
+    .filter((device) => Array.isArray(device.roles) && device.roles.includes(role))
+    .map((device) => device.token)
+    .filter(Boolean);
+  if (matching.length) return [...new Set(matching)];
+  return allRegisteredTokens();
+}
+
+function roleTokenCounts() {
+  return deviceTokens.reduce(
+    (counts, device) => {
+      for (const role of device.roles || []) {
+        counts[role] = (counts[role] || 0) + 1;
+      }
+      return counts;
+    },
+    { guardian: 0, careRecipient: 0 },
+  );
+}
+
+function registerDeviceToken(token, role) {
+  const cleanToken = typeof token === "string" ? token.trim() : "";
+  if (!cleanToken) return null;
+  const cleanRole = normalizeDeviceRole(role);
+  const index = deviceTokens.findIndex((device) => device.token === cleanToken);
+  const updatedAt = new Date().toISOString();
+  if (index >= 0) {
+    const current = deviceTokens[index];
+    const roles = Array.isArray(current.roles) ? [...current.roles] : [];
+    if (!roles.includes(cleanRole)) roles.push(cleanRole);
+    deviceTokens[index] = {
+      ...current,
+      token: cleanToken,
+      roles,
+      lastRole: cleanRole,
+      updatedAt,
+    };
+  } else {
+    deviceTokens.push({
+      token: cleanToken,
+      roles: [cleanRole],
+      lastRole: cleanRole,
+      updatedAt,
+    });
+  }
+  tokens = allRegisteredTokens();
+  return deviceTokens.find((device) => device.token === cleanToken);
+}
+
 function saveState() {
   const nextState = {
-    tokens,
+    tokens: allRegisteredTokens(),
+    deviceTokens,
     guardians,
     settings,
     emergencyInfo,
@@ -101,6 +222,257 @@ function saveState() {
     savedAt: new Date().toISOString(),
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(nextState, null, 2), "utf8");
+}
+
+let serviceAccountLoaded = false;
+let serviceAccount = null;
+let fcmAccessToken = null;
+let fcmAccessTokenExpiresAt = 0;
+let fcmMissingConfigLogged = false;
+
+function base64Url(input) {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function loadServiceAccount() {
+  if (serviceAccountLoaded) return serviceAccount;
+  serviceAccountLoaded = true;
+
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      return serviceAccount;
+    }
+
+    const configuredPath =
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (configuredPath && fs.existsSync(configuredPath)) {
+      serviceAccount = JSON.parse(fs.readFileSync(configuredPath, "utf8"));
+      return serviceAccount;
+    }
+  } catch (error) {
+    console.warn("FCM service account load failed:", error.message);
+  }
+
+  serviceAccount = null;
+  return serviceAccount;
+}
+
+function fcmProjectId() {
+  return process.env.FIREBASE_PROJECT_ID || loadServiceAccount()?.project_id;
+}
+
+function fcmCredentialPath() {
+  return (
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.FIREBASE_SERVICE_ACCOUNT ||
+    ""
+  );
+}
+
+function fcmConfigStatus() {
+  const credentialPath = fcmCredentialPath();
+  const account = loadServiceAccount();
+  const projectId = process.env.FIREBASE_PROJECT_ID || account?.project_id || null;
+  const tokenCount = allRegisteredTokens().length;
+
+  return {
+    configured: Boolean(projectId && account?.client_email && account?.private_key),
+    projectId,
+    tokenCount,
+    roleTokenCounts: roleTokenCounts(),
+    credentialSource: process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+      ? "FIREBASE_SERVICE_ACCOUNT_JSON"
+      : credentialPath
+        ? "file"
+        : "missing",
+    credentialPath: credentialPath || null,
+    credentialPathExists: credentialPath ? fs.existsSync(credentialPath) : null,
+  };
+}
+
+function httpsRequestJson(options, body) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        let parsed = null;
+        try {
+          parsed = data ? JSON.parse(data) : null;
+        } catch (_) {
+          parsed = data;
+        }
+
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(parsed);
+        } else {
+          reject(
+            new Error(
+              `HTTP ${res.statusCode}: ${
+                typeof parsed === "string" ? parsed : JSON.stringify(parsed)
+              }`,
+            ),
+          );
+        }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function getFcmAccessToken() {
+  if (fcmAccessToken && Date.now() < fcmAccessTokenExpiresAt - 60000) {
+    return fcmAccessToken;
+  }
+
+  const account = loadServiceAccount();
+  if (!account?.client_email || !account?.private_key) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const claim = {
+    iss: account.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+  const unsigned = `${base64Url(JSON.stringify(header))}.${base64Url(
+    JSON.stringify(claim),
+  )}`;
+  const privateKey = String(account.private_key).replace(/\\n/g, "\n");
+  const signature = crypto
+    .createSign("RSA-SHA256")
+    .update(unsigned)
+    .sign(privateKey, "base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+  const assertion = `${unsigned}.${signature}`;
+  const form = new URLSearchParams({
+    grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+    assertion,
+  }).toString();
+
+  const response = await httpsRequestJson(
+    {
+      hostname: "oauth2.googleapis.com",
+      path: "/token",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(form),
+      },
+    },
+    form,
+  );
+
+  fcmAccessToken = response.access_token;
+  fcmAccessTokenExpiresAt = Date.now() + Number(response.expires_in || 3600) * 1000;
+  return fcmAccessToken;
+}
+
+async function sendFcmMessage(token, alert, location = null) {
+  const projectId = fcmProjectId();
+  const accessToken = await getFcmAccessToken();
+  if (!projectId || !accessToken) return { skipped: true };
+
+  const title = String(alert.title || "Hanium Safety 알림");
+  const body = String(
+    alert.message || `${alert.room || location?.room || "집 안"} 상태를 확인해 주세요.`,
+  );
+  const payload = JSON.stringify({
+    message: {
+      token,
+      notification: { title, body },
+      android: {
+        priority: "HIGH",
+        notification: {
+          sound: "default",
+          notification_priority: "PRIORITY_HIGH",
+        },
+      },
+      data: {
+        type: String(alert.type || location?.status || "system"),
+        room: String(alert.room || location?.room || ""),
+        status: String(location?.status || alert.type || ""),
+        alertId: String(alert.id || Date.now()),
+      },
+    },
+  });
+
+  return httpsRequestJson(
+    {
+      hostname: "fcm.googleapis.com",
+      path: `/v1/projects/${projectId}/messages:send`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload),
+      },
+    },
+    payload,
+  );
+}
+
+function sendPushForAlert(alert, location = null, options = {}) {
+  const targetRole = options.targetRole || "guardian";
+  const recipients = recipientTokens(targetRole);
+  const fcm = fcmConfigStatus();
+
+  if (!recipients.length) {
+    return {
+      requested: false,
+      reason: "no_registered_tokens",
+      recipients: 0,
+      targetRole,
+      fcm,
+    };
+  }
+
+  if (!fcm.configured) {
+    if (!fcmMissingConfigLogged) {
+      console.warn(
+        "FCM service account is not configured. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON to enable terminated-app push notifications.",
+      );
+      fcmMissingConfigLogged = true;
+    }
+    return {
+      requested: false,
+      reason: "fcm_not_configured",
+      recipients: recipients.length,
+      targetRole,
+      fcm,
+    };
+  }
+
+  Promise.allSettled(
+    recipients.map((token) => sendFcmMessage(token, alert, location)),
+  ).then((results) => {
+    const sent = results.filter((result) => result.status === "fulfilled").length;
+    const failed = results.length - sent;
+    console.log(`FCM push result: sent=${sent}, failed=${failed}`);
+  });
+
+  return {
+    requested: true,
+    reason: "fcm_request_started",
+    recipients: recipients.length,
+    targetRole,
+    fcm,
+  };
 }
 
 function roomFromPosition(x, y) {
@@ -203,6 +575,28 @@ function ensureLatestLocation() {
   return latestLocation;
 }
 
+function isLocationSharingEnabled() {
+  return settings.locationSharingEnabled !== false;
+}
+
+function publicLocation(location = ensureLatestLocation()) {
+  if (isLocationSharingEnabled()) {
+    return {
+      ...location,
+      locationSharingEnabled: true,
+    };
+  }
+
+  return {
+    ...location,
+    x: 0.5,
+    y: 0.5,
+    room: "위치 공유 꺼짐",
+    locationSharingEnabled: false,
+    hiddenReason: "care_recipient_disabled",
+  };
+}
+
 function nextLocation(tick) {
   const angle = tick / 7;
   let x = 0.48 + Math.cos(angle) * 0.22 + (Math.random() * 0.03 - 0.015);
@@ -229,6 +623,16 @@ function currentLocation(tick) {
     };
   }
 
+  if (REAL_SENSOR_ONLY) {
+    const location = ensureLatestLocation();
+    latestLocation = {
+      ...location,
+      source: location.source || "sensor-waiting",
+      timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }),
+    };
+    return latestLocation;
+  }
+
   const location = nextLocation(tick);
   latestLocation = { ...location, source: "mock" };
   return latestLocation;
@@ -245,10 +649,12 @@ function nowLabel() {
 function addAlertFromLocation(location) {
   if (location.status === "normal") return;
   const existing = alerts[0];
+  const sharingEnabled = isLocationSharingEnabled();
+  const alertRoom = sharingEnabled ? location.room : "위치 비공개";
   if (
     existing &&
     existing.type === location.status &&
-    existing.room === location.room &&
+    existing.room === alertRoom &&
     !existing.resolved
   ) {
     return;
@@ -257,7 +663,10 @@ function addAlertFromLocation(location) {
   const isDanger = location.status === "danger";
   const isStill = location.status === "still";
   const isOut = location.status === "out";
-  alerts.unshift({
+  const safeRoomText = sharingEnabled
+    ? `${location.room}에서`
+    : "위치 비공개 상태에서";
+  const alert = {
     id: Date.now(),
     type: isDanger ? "danger" : "warning",
     title: isDanger
@@ -266,27 +675,32 @@ function addAlertFromLocation(location) {
         ? "장시간 움직임이 적어요"
         : "현관 접근이 감지됐어요",
     message: isDanger
-      ? `${location.room}에서 급격한 쓰러짐 패턴이 감지됐어요.`
+      ? `${safeRoomText} 급격한 쓰러짐 패턴이 감지됐어요.`
       : isStill
-        ? `${location.room}에서 움직임이 오래 감지되지 않았어요.`
+        ? `${safeRoomText} 움직임이 오래 감지되지 않았어요.`
         : isOut
-          ? `${location.room} 위험 구역에 접근했어요.`
-          : `${location.room}에서 평소와 다른 움직임이 감지됐어요.`,
-    room: location.room,
+          ? `${safeRoomText} 외출 또는 현관 접근 가능성이 확인됐어요.`
+          : `${safeRoomText} 평소와 다른 움직임이 감지됐어요.`,
+    room: alertRoom,
     time: nowLabel(),
     urgent: isDanger,
     resolved: false,
-  });
+  };
+  alerts.unshift(alert);
   saveState();
+  sendPushForAlert(alert, location);
+  return alert;
 }
 
 function resetDemoState() {
-  const currentTokens = tokens;
+  const currentTokens = allRegisteredTokens();
+  const currentDeviceTokens = deviceTokens;
   guardians = clone(defaultState.guardians);
   settings = clone(defaultState.settings);
   emergencyInfo = clone(defaultState.emergencyInfo);
   alerts = [];
   tokens = currentTokens;
+  deviceTokens = currentDeviceTokens;
   forcedScenario = null;
   latestLocation = normalizeLocation({
     x: 0.34,
@@ -394,13 +808,14 @@ function sendWsText(socket, obj) {
 
 function broadcastLocation(location) {
   addAlertFromLocation(location);
+  const visibleLocation = publicLocation(location);
   for (const socket of wsClients) {
     if (socket.destroyed) {
       wsClients.delete(socket);
       continue;
     }
     try {
-      sendWsText(socket, location);
+      sendWsText(socket, visibleLocation);
     } catch (_) {
       wsClients.delete(socket);
       socket.destroy();
@@ -412,7 +827,7 @@ function updateSensorLocation(body = {}) {
   latestLocation = normalizeLocation(body);
   manualSensorUntil = Date.now() + Number(body.holdMs || 60000);
   broadcastLocation(latestLocation);
-  return latestLocation;
+  return publicLocation(latestLocation);
 }
 
 function adminHtml() {
@@ -627,6 +1042,10 @@ function adminHtml() {
       border-left-color: #f4a62a;
       background: #fffaf0;
     }
+    .alert-card.safe {
+      border-left-color: #28be82;
+      background: #f3fff9;
+    }
     .alert-title-line {
       display: flex;
       gap: 8px;
@@ -644,6 +1063,7 @@ function adminHtml() {
     }
     .badge.danger { background: #ffe9ee; color: #ff5b73; }
     .badge.warning { background: #fff2d8; color: #d98200; }
+    .badge.safe { background: #e9fff5; color: #28be82; }
     .muted { color: #7a8397; font-size: 13px; }
     @media (max-width: 860px) {
       main { grid-template-columns: 1fr; }
@@ -845,11 +1265,15 @@ function adminHtml() {
         const div = document.createElement("div");
         const badgeClass = alert.urgent || alert.type === "danger"
           ? "danger"
+          : alert.type === "safe"
+            ? "safe"
           : alert.type === "warning"
             ? "warning"
             : "";
         const badgeText = alert.urgent || alert.type === "danger"
           ? "긴급"
+          : alert.type === "safe"
+            ? "안전"
           : alert.type === "warning"
             ? "주의"
             : "기록";
@@ -1054,11 +1478,16 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, {
       ok: true,
       port: PORT,
+      realSensorOnly: REAL_SENSOR_ONLY,
       wsClients: wsClients.size,
       hasLocation: Boolean(latestLocation),
+      push: fcmConfigStatus(),
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     });
+  }
+  if (req.method === "GET" && url.pathname === "/push/status") {
+    return sendJson(res, 200, { push: fcmConfigStatus() });
   }
   if (req.method === "GET" && url.pathname === "/state") {
     return sendJson(res, 200, {
@@ -1066,12 +1495,13 @@ const server = http.createServer((req, res) => {
       settings,
       emergencyInfo,
       alerts,
-      tokens: tokens.length,
-      location: ensureLatestLocation(),
+      tokens: allRegisteredTokens().length,
+      deviceTokens: roleTokenCounts(),
+      location: publicLocation(ensureLatestLocation()),
     });
   }
   if (req.method === "GET" && url.pathname === "/location/latest") {
-    return sendJson(res, 200, { location: ensureLatestLocation() });
+    return sendJson(res, 200, { location: publicLocation(ensureLatestLocation()) });
   }
   if (req.method === "GET" && url.pathname === "/alerts") {
     return sendJson(res, 200, { alerts });
@@ -1087,14 +1517,19 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && url.pathname === "/device/register") {
     readJsonBody(req, (body) => {
-      if (body.token && !tokens.includes(body.token)) tokens.push(body.token);
+      const device = registerDeviceToken(body.token, body.role);
       saveState();
-      sendJson(res, 200, { status: "ok", tokens: tokens.length });
+      sendJson(res, 200, {
+        status: device ? "ok" : "ignored",
+        device,
+        tokens: allRegisteredTokens().length,
+        roleTokenCounts: roleTokenCounts(),
+      });
     });
     return;
   }
   if (req.method === "POST" && url.pathname === "/alarm/test") {
-    alerts.unshift({
+    const alert = {
       id: Date.now(),
       type: "system",
       title: "테스트 알림을 보냈어요",
@@ -1103,9 +1538,60 @@ const server = http.createServer((req, res) => {
       time: nowLabel(),
       urgent: false,
       resolved: false,
-    });
+    };
+    alerts.unshift(alert);
     saveState();
-    return sendJson(res, 200, { status: "sent", recipients: tokens.length });
+    const push = sendPushForAlert(alert);
+    return sendJson(res, 200, {
+      status: push.requested ? "push_requested" : "stored_only",
+      recipients: push.recipients,
+      push,
+    });
+  }
+  if (req.method === "POST" && url.pathname === "/care-recipient/safe") {
+    readJsonBody(req, (body) => {
+      const current = ensureLatestLocation();
+      const room = normalizeRoom(body.room || current.room, current.x, current.y);
+      alerts = alerts.map((alert) => ({
+        ...alert,
+        resolved: true,
+        urgent: false,
+      }));
+
+      const alert = {
+        id: Date.now(),
+        type: "safe",
+        title: "어르신이 괜찮다고 알려왔어요",
+        message: `${room}에서 괜찮다고 표시했어요. 보호자 확인 알림을 정리합니다.`,
+        room,
+        time: nowLabel(),
+        urgent: false,
+        resolved: true,
+      };
+      alerts.unshift(alert);
+
+      forcedScenario = { status: "normal", until: Date.now() + 10000 };
+      latestLocation = normalizeLocation({
+        ...current,
+        status: "normal",
+        room,
+        pose: "standing",
+        source: "care-recipient",
+      });
+      broadcastLocation(latestLocation);
+      saveState();
+
+      const push = sendPushForAlert(alert, latestLocation, {
+        targetRole: "guardian",
+      });
+      sendJson(res, 200, {
+        status: push.requested ? "guardian_push_requested" : "stored_only",
+        alert,
+        location: latestLocation,
+        push,
+      });
+    });
+    return;
   }
   if (req.method === "POST" && url.pathname === "/alerts/resolve") {
     alerts = alerts.map((alert) => ({ ...alert, resolved: true, urgent: false }));
@@ -1156,6 +1642,7 @@ const server = http.createServer((req, res) => {
     readJsonBody(req, (body) => {
       settings = { ...settings, ...body };
       saveState();
+      broadcastLocation(ensureLatestLocation());
       sendJson(res, 200, { status: "ok", settings });
     });
     return;
@@ -1207,6 +1694,7 @@ const server = http.createServer((req, res) => {
         status: "ok",
         scenario: forcedScenario,
         location: latestLocation,
+        push: fcmConfigStatus(),
       });
     });
     return;

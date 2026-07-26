@@ -26,6 +26,13 @@ Node.js 개발용 서버도 제공합니다. Python/FastAPI 설치 없이 실행
 .\run_mock_server_node.cmd
 ```
 
+실제 Jetson/센서 값만 반영하고 mock 위치가 자동으로 움직이지 않게 하려면 서버 실행 전에 아래 환경변수를 지정합니다.
+
+```powershell
+$env:REAL_SENSOR_ONLY="true"
+.\run_mock_server_node.cmd
+```
+
 지금 앱 개발 단계에서는 위 Node.js mock 서버를 먼저 추천합니다. 설정값, 보호자, 알림은
 `dev_state.json`에 저장되므로 서버를 껐다 켜도 유지됩니다.
 
@@ -56,6 +63,7 @@ start http://127.0.0.1:8000/admin
 - `POST /demo/reset` : 발표/시연 상태 초기화
 - `GET /settings` : 설정 조회
 - `POST /settings` : 설정 저장
+- `POST /settings`의 `locationSharingEnabled` : 피보호자 위치 공유 ON/OFF 저장. OFF일 때 보호자 앱에는 위치와 이동 동선이 비공개 처리됨
 - `GET /emergency-info` : 119 신고용 집 주소/출입/의료 참고 정보 조회
 - `POST /emergency-info` : 119 신고용 집 주소/출입/의료 참고 정보 저장
 - `GET /guardians` : 보호자 목록 조회
@@ -64,6 +72,7 @@ start http://127.0.0.1:8000/admin
 - `POST /guardians/delete` : 보호자 삭제
 - `POST /device/register` : 앱 알림 토큰 등록
 - `POST /alarm/test` : 테스트 알림 요청
+- `POST /care-recipient/safe` : 피보호자가 괜찮다고 알린 경우 보호자에게 알림 전송
 - `POST /scenario` : 시연용 상황 발생
 - `WS /ws/location` : 실시간 위치/방/자세/위험 상태 스트림
 
@@ -81,3 +90,54 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -Content
 
 PowerShell에서 한글 JSON이 깨질 수 있으므로 테스트 명령에서는 `room`을 생략하는 것을 추천합니다.
 서버가 `x`, `y` 좌표를 기준으로 거실/주방/침실/욕실/현관을 자동 계산합니다.
+
+## 앱이 꺼져 있어도 오는 FCM 알림
+
+앱은 Firebase Messaging 토큰을 `POST /device/register`로 서버에 등록합니다. 이때 `role` 값으로 `guardian` 또는 `careRecipient`를 함께 보내며, Node.js mock 서버는 역할별 토큰을 저장합니다. 위험 상황, 테스트 알림, 피보호자의 안전 확인 알림은 기본적으로 보호자 토큰을 대상으로 Firebase Cloud Messaging 푸시 알림을 보냅니다.
+
+단, 실제 FCM 전송은 Firebase 서비스 계정 키가 있어야 동작합니다. 키가 없으면 기존처럼 앱이 켜져 있을 때 WebSocket/REST 기반 시연만 동작하고, 서버는 FCM 전송을 조용히 건너뜁니다.
+
+서비스 계정 JSON 파일을 받은 뒤 서버 실행 전에 PowerShell에서 아래처럼 지정합니다.
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\firebase-service-account.json"
+.\run_mock_server_node.cmd
+```
+
+또는 프로젝트 ID를 별도로 지정해야 하는 환경에서는 아래처럼 실행합니다.
+
+```powershell
+$env:FIREBASE_PROJECT_ID="firebase-project-id"
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\firebase-service-account.json"
+.\run_mock_server_node.cmd
+```
+
+테스트 알림 전송:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/alarm/test
+```
+
+응답에서 `status`가 `stored_only`이고 `push.reason`이 `fcm_not_configured`이면 서버 알림 목록에는 저장됐지만 실제 FCM 푸시는 보내지 못한 상태입니다. 이 경우 서비스 계정 JSON 경로를 실제 파일 경로로 다시 지정해야 합니다.
+
+FCM 설정 상태 확인:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/push/status
+```
+
+정상 전송 준비 상태라면 `push.configured`가 `True`이고 `credentialPathExists`가 `True`로 나와야 합니다.
+
+피보호자가 “괜찮다고 알리기”를 누른 상황 테스트:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/care-recipient/safe -ContentType 'application/json' -Body '{"room":"거실"}'
+```
+
+보호자 기기가 한 번이라도 보호자 모드로 실행되어 토큰을 등록해야 보호자 대상 푸시가 정상 전송됩니다.
+
+낙상 의심 시나리오 전송:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/scenario -ContentType 'application/json' -Body '{"status":"danger","seconds":18}'
+```
