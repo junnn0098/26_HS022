@@ -1,0 +1,31 @@
+
+
+# Local captures, models and generated output
+/captures*/
+/runtime/
+/models/
+/manifests/
+/reports/
+*.npz
+*.npy
+*.pt
+*.pth
+*.onnx
+*.engine
+*.log
+
+# Python environment and cache
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+serviceAccount*.json
+*firebase-adminsdk*.json

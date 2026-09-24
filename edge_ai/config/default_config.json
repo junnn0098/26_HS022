@@ -1,0 +1,54 @@
+{
+  "feature": {
+    "subcarriers": 64,
+    "sample_rate_hz": 32,
+    "window_seconds": 5.0,
+    "max_nodes": 4,
+    "min_node_quality": 0.25
+  },
+  "model": {
+    "feature_channels": 193,
+    "embedding_dim": 128,
+    "activity_classes": 10,
+    "count_classes": 4,
+    "dropout": 0.2
+  },
+  "runtime": {
+    "inference_interval_seconds": 0.5,
+    "min_quality": 0.55,
+    "min_activity_confidence": 0.55,
+    "fall_candidate_probability": 0.7,
+    "fall_candidate_hits": 2,
+    "post_fall_timeout_seconds": 8.0,
+    "post_fall_lying_probability": 0.55,
+    "post_fall_lying_hits": 3,
+    "recovery_probability": 0.65,
+    "recovery_hits": 2,
+    "confirmed_hold_seconds": 30.0
+  },
+  "health": {
+    "enabled": true,
+    "respiratory_sample_rate_hz": 10,
+    "respiratory_window_seconds": 60.0,
+    "respiratory_min_history_seconds": 30.0,
+    "respiratory_min_bpm": 6.0,
+    "respiratory_max_bpm": 30.0,
+    "respiratory_min_confidence": 0.45,
+    "respiratory_min_nodes": 2,
+    "respiratory_max_motion_score": 0.7,
+    "apnea_enabled": true,
+    "apnea_min_seconds": 10.0,
+    "apnea_recent_window_seconds": 12.0,
+    "apnea_amplitude_ratio": 0.3,
+    "apnea_baseline_updates": 3,
+    "assumed_people_when_model_unavailable": 1,
+    "cough_enabled": true,
+    "cough_candidate_min_nodes": 2,
+    "cough_candidate_z": 6.0,
+    "cough_coincidence_seconds": 0.35,
+    "cough_refractory_seconds": 1.0,
+    "cough_baseline_seconds": 20.0,
+    "cough_min_baseline_samples": 40,
+    "cough_confirm_probability": 0.8
+  }
+}
