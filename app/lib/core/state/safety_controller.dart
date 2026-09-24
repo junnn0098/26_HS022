@@ -7,12 +7,15 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../app/app_config.dart';
 import '../models/safety_models.dart';
+import '../services/local_safety_cache.dart';
+import '../services/safety_notification_bridge.dart';
 import '../services/safety_repository.dart';
 
 class SafetyController extends ChangeNotifier {
-  SafetyController(this.repository);
+  SafetyController(this.repository, {LocalSafetyCache? cache}) : cache = cache ?? const LocalSafetyCache();
 
   final SafetyRepository repository;
+  final LocalSafetyCache cache;
 
   SafetySnapshot _snapshot = SafetySnapshot.initial();
   SafetySnapshot get snapshot => _snapshot;
@@ -22,6 +25,8 @@ class SafetyController extends ChangeNotifier {
   Timer? _locationPollTimer;
   Timer? _healthPollTimer;
   Timer? _reconnectTimer;
+  Timer? _cacheSaveTimer;
+  Timer? _alertPollTimer;
 
   bool _started = false;
   bool _pollingLocation = false;
@@ -29,14 +34,28 @@ class SafetyController extends ChangeNotifier {
   String _lastLocationSignature = '';
   int _reconnectSeconds = 1;
   DateTime _lastServerSeen = DateTime.fromMillisecondsSinceEpoch(0);
+  final Set<int> _knownAlertIds = <int>{};
+  bool _serverAlertsPrimed = false;
+  String _lastSafetyNotificationKey = '';
+  DateTime _lastSafetyNotificationAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   void start() {
     if (_started) return;
     _started = true;
+    unawaited(_restoreCachedSnapshot());
     unawaited(refreshAll());
     _connectSocket();
     _startHealthPolling();
     _startLocationPolling();
+    _startAlertPolling();
+  }
+
+  Future<void> _restoreCachedSnapshot() async {
+    final cached = await cache.load();
+    if (cached == null) return;
+    if (_lastServerSeen.millisecondsSinceEpoch != 0) return;
+    _snapshot = cached;
+    notifyListeners();
   }
 
   Future<void> refreshAll() async {
@@ -56,6 +75,42 @@ class SafetyController extends ChangeNotifier {
     _applyState(data);
   }
 
+  Future<bool> deleteAlert(int id) async {
+    final previousAlerts = _snapshot.alerts;
+    final nextAlerts = previousAlerts.where((alert) => alert.id != id).toList();
+    if (nextAlerts.length == previousAlerts.length) return true;
+
+    _snapshot = _snapshot.copyWith(alerts: nextAlerts);
+    notifyListeners();
+    _queueCacheSave();
+
+    final result = await repository.deleteAlert(id);
+    if (result == null) {
+      _setConnection(false, '알림은 앱에서 정리했고 서버 기록은 다시 맞추는 중이에요');
+      return false;
+    }
+
+    _applyAlerts(result['alerts']);
+    return true;
+  }
+
+  Future<bool> clearAlerts() async {
+    if (_snapshot.alerts.isEmpty) return true;
+
+    _snapshot = _snapshot.copyWith(alerts: const []);
+    notifyListeners();
+    _queueCacheSave();
+
+    final result = await repository.clearAlerts();
+    if (result == null) {
+      _setConnection(false, '알림은 앱에서 정리했고 서버 기록은 다시 맞추는 중이에요');
+      return false;
+    }
+
+    _applyAlerts(result['alerts']);
+    return true;
+  }
+
   Future<void> markSafe() async {
     await repository.resolveAlerts();
     final safeRoom = _snapshot.room;
@@ -66,11 +121,15 @@ class SafetyController extends ChangeNotifier {
     _snapshot = _snapshot.copyWith(
       status: SafetyStatus.normal,
       pose: 'standing',
+      breathingRate: breathingRateForStatus(SafetyStatus.normal),
+      breathingConfidence: 0.72,
+      breathingEstimated: true,
       alerts: alerts,
       connectionNote: '보호자가 안전을 확인했어요',
       lastUpdated: DateTime.now(),
     );
     notifyListeners();
+    _queueCacheSave();
     unawaited(refreshAll());
   }
 
@@ -84,11 +143,15 @@ class SafetyController extends ChangeNotifier {
     _snapshot = _snapshot.copyWith(
       status: SafetyStatus.normal,
       pose: 'standing',
+      breathingRate: breathingRateForStatus(SafetyStatus.normal),
+      breathingConfidence: 0.72,
+      breathingEstimated: true,
       alerts: alerts,
       connectionNote: '괜찮다고 보호자에게 알렸어요',
       lastUpdated: DateTime.now(),
     );
     notifyListeners();
+    _queueCacheSave();
     unawaited(refreshAll());
   }
 
@@ -114,7 +177,7 @@ class SafetyController extends ChangeNotifier {
     }
   }
 
-  Future<void> updateSetting(String key, Object? value) async {
+  Future<bool> updateSetting(String key, Object? value) async {
     final nextSettings = Map<String, dynamic>.from(_snapshot.settings);
     nextSettings[key] = value;
     _snapshot = _snapshot.copyWith(
@@ -124,7 +187,29 @@ class SafetyController extends ChangeNotifier {
           : _snapshot.locationSharingEnabled,
     );
     notifyListeners();
-    await repository.updateSetting(key, value);
+    _queueCacheSave();
+
+    final result = await repository.updateSetting(key, value);
+    if (result == null) {
+      _setConnection(false, '설정은 기기에 적용했고 서버 저장은 다시 확인 중이에요');
+      return false;
+    }
+
+    final settings = result['settings'];
+    if (settings is Map) {
+      final parsedSettings = Map<String, dynamic>.from(settings);
+      final locationSharing = parsedSettings['locationSharingEnabled'];
+      _snapshot = _snapshot.copyWith(
+        settings: parsedSettings,
+        locationSharingEnabled: locationSharing is bool
+            ? locationSharing
+            : _snapshot.locationSharingEnabled,
+      );
+      notifyListeners();
+      _queueCacheSave();
+    }
+
+    return true;
   }
 
   void _connectSocket() {
@@ -135,12 +220,12 @@ class SafetyController extends ChangeNotifier {
       _channel = repository.openLocationSocket();
       _wsSubscription = _channel!.stream.listen(
         _handleSocketData,
-        onDone: () => _scheduleReconnect('실시간 확인이 잠시 멈췄어요'),
-        onError: (_) => _scheduleReconnect('실시간 확인을 다시 연결하는 중'),
+        onDone: () => _scheduleReconnect('실시간 연결이 잠시 끊겼어요'),
+        onError: (_) => _scheduleReconnect('실시간 연결을 다시 시도 중'),
         cancelOnError: true,
       );
     } catch (_) {
-      _scheduleReconnect('실시간 확인을 다시 연결하는 중');
+      _scheduleReconnect('실시간 연결을 다시 시도 중');
     }
   }
 
@@ -151,7 +236,7 @@ class SafetyController extends ChangeNotifier {
       _reconnectSeconds = 1;
       _applyLocation(map);
     } catch (_) {
-      // 잘못 들어온 일시 데이터는 무시하고 다음 데이터를 기다린다.
+      // 잘못 들어온 데이터는 건너뛰고 다음 실시간 데이터를 기다린다.
     }
   }
 
@@ -161,7 +246,7 @@ class SafetyController extends ChangeNotifier {
       _wsSubscription?.cancel();
       _channel?.sink.close();
     } catch (_) {
-      // 이미 닫힌 경우는 무시한다.
+      // 이미 닫힌 연결이면 무시한다.
     }
     _wsSubscription = null;
     _channel = null;
@@ -196,6 +281,12 @@ class SafetyController extends ChangeNotifier {
     unawaited(_pollLatestLocation());
   }
 
+
+  void _startAlertPolling() {
+    _alertPollTimer ??= Timer.periodic(const Duration(seconds: 4), (_) {
+      unawaited(refreshAlerts());
+    });
+  }
   Future<void> _pollLatestLocation() async {
     if (_pollingLocation) return;
     _pollingLocation = true;
@@ -222,10 +313,9 @@ class SafetyController extends ChangeNotifier {
       final parsedSettings = Map<String, dynamic>.from(settings);
       next = next.copyWith(
         settings: parsedSettings,
-        locationSharingEnabled:
-            parsedSettings['locationSharingEnabled'] is bool
-                ? parsedSettings['locationSharingEnabled'] as bool
-                : next.locationSharingEnabled,
+        locationSharingEnabled: parsedSettings['locationSharingEnabled'] is bool
+            ? parsedSettings['locationSharingEnabled'] as bool
+            : next.locationSharingEnabled,
       );
     }
 
@@ -241,20 +331,15 @@ class SafetyController extends ChangeNotifier {
     final emergencyInfo = data['emergencyInfo'];
     if (emergencyInfo is Map) {
       next = next.copyWith(
-        emergencyInfo: EmergencyInfo.fromJson(
-          Map<String, dynamic>.from(emergencyInfo),
-        ),
+        emergencyInfo: EmergencyInfo.fromJson(Map<String, dynamic>.from(emergencyInfo)),
       );
     }
 
     final alerts = data['alerts'];
     if (alerts is List) {
-      final parsed = alerts
-          .whereType<Map>()
-          .map((item) => AlertEvent.fromJson(Map<String, dynamic>.from(item)))
-          .take(40)
-          .toList();
-      if (parsed.isNotEmpty) next = next.copyWith(alerts: parsed);
+      final parsed = _parseAlerts(alerts);
+      _notifyNewServerAlerts(parsed);
+      next = next.copyWith(alerts: parsed);
     }
 
     _snapshot = next;
@@ -263,7 +348,25 @@ class SafetyController extends ChangeNotifier {
       _applyLocation(Map<String, dynamic>.from(location), notifyAlways: true);
     } else {
       notifyListeners();
+      _queueCacheSave();
     }
+  }
+
+  void _applyAlerts(dynamic alerts) {
+    if (alerts is! List) return;
+    final parsed = _parseAlerts(alerts);
+    _notifyNewServerAlerts(parsed);
+    _snapshot = _snapshot.copyWith(alerts: parsed);
+    notifyListeners();
+    _queueCacheSave();
+  }
+
+  List<AlertEvent> _parseAlerts(List<dynamic> alerts) {
+    return alerts
+        .whereType<Map>()
+        .map((item) => AlertEvent.fromJson(Map<String, dynamic>.from(item)))
+        .take(40)
+        .toList();
   }
 
   void _applyLocation(Map<String, dynamic> map, {bool notifyAlways = false}) {
@@ -277,12 +380,19 @@ class SafetyController extends ChangeNotifier {
         ? RoomResolver.normalize(map['room'], x, y)
         : cleanText(map['room'], '위치 공유 꺼짐');
     final pose = cleanText(map['pose'], poseFromStatus(status));
-    final confidence = normalizedDouble(
-      map['confidence'],
-      _snapshot.confidence,
+    final confidence = normalizedDouble(map['confidence'], _snapshot.confidence);
+    final dataSource = cleanText(map['source'], 'sensor');
+    final rawBreathingRate =
+        map['breathingRate'] ?? map['respirationRate'] ?? map['breathRate'];
+    final breathingEstimated = rawBreathingRate == null;
+    final breathingRate =
+        optionalBoundedDouble(rawBreathingRate, min: 6, max: 36) ?? breathingRateForStatus(status);
+    final breathingConfidence = normalizedDouble(
+      map['breathingConfidence'] ?? map['respirationConfidence'],
+      breathingEstimated ? 0.66 : _snapshot.breathingConfidence,
     );
     final signature =
-        '${x.toStringAsFixed(3)}|${y.toStringAsFixed(3)}|$status|$room|$pose|${confidence.toStringAsFixed(2)}|$locationSharingEnabled';
+        '${x.toStringAsFixed(3)}|${y.toStringAsFixed(3)}|$status|$room|$pose|${confidence.toStringAsFixed(2)}|${breathingRate.toStringAsFixed(1)}|${breathingConfidence.toStringAsFixed(2)}|$breathingEstimated|$locationSharingEnabled|$dataSource';
 
     if (!notifyAlways && signature == _lastLocationSignature) return;
     _lastLocationSignature = signature;
@@ -299,10 +409,8 @@ class SafetyController extends ChangeNotifier {
     var alerts = _snapshot.alerts;
     if (status != SafetyStatus.normal) {
       final liveAlert = AlertEvent.fromStatus(status, room: room);
-      alerts = [
-        liveAlert,
-        ...alerts.where((alert) => alert.status != status),
-      ].take(40).toList();
+      _showSafetyNotification(liveAlert);
+      alerts = [liveAlert, ...alerts.where((alert) => alert.status != status)].take(40).toList();
     }
 
     _snapshot = _snapshot.copyWith(
@@ -312,44 +420,92 @@ class SafetyController extends ChangeNotifier {
       x: x,
       y: y,
       confidence: confidence,
+      breathingRate: breathingRate,
+      breathingConfidence: breathingConfidence,
+      breathingEstimated: breathingEstimated,
       locationSharingEnabled: locationSharingEnabled,
+      dataSource: dataSource,
       lastUpdated: DateTime.now(),
       movementPath: path,
       alerts: alerts,
       serverConnected: true,
     );
     notifyListeners();
+    _queueCacheSave();
   }
 
+
+  void _notifyNewServerAlerts(List<AlertEvent> alerts) {
+    if (!_serverAlertsPrimed) {
+      _knownAlertIds.addAll(alerts.map((alert) => alert.id));
+      _serverAlertsPrimed = true;
+      return;
+    }
+
+    AlertEvent? newestUnseen;
+    for (final alert in alerts) {
+      if (!_knownAlertIds.contains(alert.id)) {
+        newestUnseen ??= alert;
+      }
+    }
+
+    _knownAlertIds
+      ..clear()
+      ..addAll(alerts.take(80).map((alert) => alert.id));
+
+    if (newestUnseen != null) {
+      _showSafetyNotification(newestUnseen, allowNormal: true);
+    }
+  }
+
+  void _showSafetyNotification(
+    AlertEvent alert, {
+    bool allowNormal = false,
+  }) {
+    if (alert.resolved) return;
+    if (!allowNormal && alert.status == SafetyStatus.normal) return;
+
+    final now = DateTime.now();
+    final key = '${alert.status}|${alert.room}';
+    if (key == _lastSafetyNotificationKey &&
+        now.difference(_lastSafetyNotificationAt) < const Duration(seconds: 12)) {
+      return;
+    }
+
+    _lastSafetyNotificationKey = key;
+    _lastSafetyNotificationAt = now;
+    unawaited(
+      SafetyNotificationBridge.showAlert(alert, allowNormal: allowNormal),
+    );
+  }
   void _markServerSeen(String note) {
     _lastServerSeen = DateTime.now();
     if (!_snapshot.serverConnected || _snapshot.connectionNote != note) {
-      _snapshot = _snapshot.copyWith(
-        serverConnected: true,
-        connectionNote: note,
-      );
+      _snapshot = _snapshot.copyWith(serverConnected: true, connectionNote: note);
       notifyListeners();
     }
   }
 
   void _markDisconnectedIfStale() {
-    if (DateTime.now().difference(_lastServerSeen) <
-        const Duration(seconds: 8)) {
+    if (DateTime.now().difference(_lastServerSeen) < const Duration(seconds: 8)) {
       return;
     }
     _setConnection(false, '최근 상태를 다시 확인 중');
   }
 
   void _setConnection(bool connected, String note) {
-    if (_snapshot.serverConnected == connected &&
-        _snapshot.connectionNote == note) {
+    if (_snapshot.serverConnected == connected && _snapshot.connectionNote == note) {
       return;
     }
-    _snapshot = _snapshot.copyWith(
-      serverConnected: connected,
-      connectionNote: note,
-    );
+    _snapshot = _snapshot.copyWith(serverConnected: connected, connectionNote: note);
     notifyListeners();
+  }
+
+  void _queueCacheSave() {
+    _cacheSaveTimer?.cancel();
+    _cacheSaveTimer = Timer(const Duration(milliseconds: 450), () {
+      unawaited(cache.save(_snapshot));
+    });
   }
 
   (double, double, String) _scenarioPreset(SafetyStatus status) {
@@ -364,13 +520,16 @@ class SafetyController extends ChangeNotifier {
   @override
   void dispose() {
     _locationPollTimer?.cancel();
+    _alertPollTimer?.cancel();
     _healthPollTimer?.cancel();
     _reconnectTimer?.cancel();
+    _cacheSaveTimer?.cancel();
+    unawaited(cache.save(_snapshot));
     _wsSubscription?.cancel();
     try {
       _channel?.sink.close();
     } catch (_) {
-      // 이미 닫힌 경우는 무시한다.
+      // 이미 닫힌 연결이면 무시한다.
     }
     repository.close();
     super.dispose();

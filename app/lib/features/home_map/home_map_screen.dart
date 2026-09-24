@@ -26,14 +26,21 @@ class HomeMapScreen extends StatelessWidget {
               children: [
                 _FigmaHeader(snapshot: snapshot),
                 const SizedBox(height: 18),
-                _FigmaMapCard(
-                  snapshot: snapshot,
-                  onRefresh: controller.refreshAll,
-                  onExpand: () => _showExpandedMap(context),
-                  onGuide: () => _showMapGuide(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _FigmaMapCard(
+                          snapshot: snapshot,
+                          onExpand: () => _showExpandedMap(context),
+                          onGuide: () => _showMapGuide(context),
+                        ),
+                        const SizedBox(height: 16),
+                        _FigmaStatusCard(snapshot: snapshot),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                _FigmaStatusCard(snapshot: snapshot),
               ],
             ),
           ),
@@ -52,14 +59,11 @@ class HomeMapScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '집 안 도면 읽는 법',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-            ),
+            Text('집 안 도면 읽는 법', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             SizedBox(height: 12),
             Text(
-              '방 구조, 현재 위치, 최근 이동 흐름을 한눈에 보여줘요. '
-              '초록 원은 ESP32 수신 노드, 사람 아이콘은 현재 위치, 점선은 최근 움직임이에요.',
+              '도면은 일반 가정집 구조에 맞춰 ESP32-S3 수신 노드와 AP 위치를 표시해요. '
+              'ESP32-1은 (0,0) 기준점이고, 사람 아이콘은 현재 위치, 잔상은 최근 이동 흐름이에요.',
               style: TextStyle(height: 1.5, color: AppColors.muted),
             ),
           ],
@@ -104,7 +108,7 @@ class HomeMapScreen extends StatelessWidget {
                               Text(
                                 snapshot.isLocationHidden
                                     ? '현재 위치 공유가 꺼져 있어요'
-                                    : '${snapshot.room} · ${snapshot.poseLabel} 상태',
+                                    : '${snapshot.room} · 위치 확인 중',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.72),
                                   fontWeight: FontWeight.w800,
@@ -116,9 +120,7 @@ class HomeMapScreen extends StatelessWidget {
                         IconButton.filled(
                           onPressed: () => Navigator.of(context).pop(),
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.16,
-                            ),
+                            backgroundColor: Colors.white.withValues(alpha: 0.16),
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.close_rounded),
@@ -135,7 +137,7 @@ class HomeMapScreen extends StatelessWidget {
                             maxScale: 3.2,
                             boundaryMargin: const EdgeInsets.all(80),
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 520),
+                              constraints: const BoxConstraints(maxWidth: 560),
                               child: FloorPlanView(snapshot: snapshot),
                             ),
                           ),
@@ -144,16 +146,13 @@ class HomeMapScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        '손가락으로 확대/축소해서 자세히 볼 수 있어요',
+                        '손가락으로 확대·축소해서 자세히 볼 수 있어요',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.82),
                           fontSize: 12,
@@ -172,9 +171,10 @@ class HomeMapScreen extends StatelessWidget {
         return FadeTransition(
           opacity: animation,
           child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            ),
+            scale: Tween<double>(
+              begin: 0.96,
+              end: 1,
+            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
             child: child,
           ),
         );
@@ -192,8 +192,6 @@ class _FigmaHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final badgeLabel = snapshot.isLocationHidden
         ? '위치 비공개'
-        : snapshot.isDanger
-        ? '확인 필요'
         : snapshot.needsAttention
         ? '확인 필요'
         : '안정적';
@@ -236,21 +234,17 @@ class _FigmaHeader extends StatelessWidget {
 }
 
 class _FigmaMapCard extends StatelessWidget {
-  const _FigmaMapCard({
-    required this.snapshot,
-    required this.onRefresh,
-    required this.onExpand,
-    required this.onGuide,
-  });
+  const _FigmaMapCard({required this.snapshot, required this.onExpand, required this.onGuide});
 
   final SafetySnapshot snapshot;
-  final VoidCallback onRefresh;
   final VoidCallback onExpand;
   final VoidCallback onGuide;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return PressableScale(
+      onTap: onExpand,
+      child: Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -278,39 +272,30 @@ class _FigmaMapCard extends StatelessWidget {
                     ),
                     child: const Row(
                       children: [
-                        Icon(
-                          Icons.my_location_rounded,
-                          color: AppColors.primary,
-                          size: 17,
-                        ),
+                        Icon(Icons.my_location_rounded, color: AppColors.primary, size: 17),
                         SizedBox(width: 8),
                         Text(
                           '현재 위치 중심',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900),
                         ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                _CircleAction(icon: Icons.add_rounded, onTap: onRefresh),
-                const SizedBox(width: 8),
-                _CircleAction(icon: Icons.menu_rounded, onTap: onGuide),
+                _CircleAction(icon: Icons.menu_rounded, tooltip: '도면 설명 보기', onTap: onGuide),
               ],
             ),
             const SizedBox(height: 14),
-            PressableScale(
-              onTap: onExpand,
-              child: Hero(
-                tag: 'home-floor-plan',
-                child: FloorPlanView(snapshot: snapshot),
-              ),
+            Hero(
+              tag: 'home-floor-plan',
+              child: FloorPlanView(snapshot: snapshot),
             ),
+            const SizedBox(height: 10),
+            const TapHintLabel(icon: Icons.open_in_full_rounded, label: '도면 눌러 확대'),
           ],
         ),
+      ),
     );
   }
 }
@@ -332,9 +317,7 @@ class _FigmaStatusCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isSafe
-            ? const Color(0xFFE8FFF5)
-            : statusSoftColor(snapshot.status),
+        color: isSafe ? const Color(0xFFE8FFF5) : statusSoftColor(snapshot.status),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: color.withValues(alpha: 0.10)),
       ),
@@ -343,10 +326,7 @@ class _FigmaStatusCard extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: Icon(statusIcon(snapshot.status), color: color),
           ),
           const SizedBox(width: 14),
@@ -366,7 +346,7 @@ class _FigmaStatusCard extends StatelessWidget {
                 Text(
                   snapshot.isLocationHidden
                       ? '피보호자가 현재 위치 공유를 꺼두었어요'
-                      : '$displayRoom에서 ${snapshot.poseLabel} 상태 · ${snapshot.lastUpdatedText}',
+                      : '$displayRoom 위치 · ${snapshot.lastUpdatedText}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -386,31 +366,35 @@ class _FigmaStatusCard extends StatelessWidget {
 }
 
 class _CircleAction extends StatelessWidget {
-  const _CircleAction({required this.icon, required this.onTap});
+  const _CircleAction({required this.icon, required this.tooltip, required this.onTap});
 
   final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F3FA),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF17213B).withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F3FA),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF17213B).withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: AppColors.primaryDark),
         ),
-        child: Icon(icon, color: AppColors.primaryDark),
       ),
     );
   }

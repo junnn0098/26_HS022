@@ -37,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isGuardian = _selectedRole == AppRole.guardian;
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -48,29 +50,74 @@ class _LoginScreenState extends State<LoginScreen> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.primary, Color(0xFF765EF2)],
+                  colors: [Color(0xFF5B6CF6), Color(0xFF21C58B)],
                 ),
                 borderRadius: BorderRadius.circular(34),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF5B6CF6).withValues(alpha: 0.26),
+                    blurRadius: 34,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.health_and_safety_rounded,
-                      color: Colors.white,
-                      size: 34,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(23),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryDark.withValues(alpha: 0.18),
+                              blurRadius: 22,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.asset(
+                            'assets/images/hanium_protection_app_icon_preview.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '한이음 어플',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.96),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'WiFi CSI 생활 안전 확인',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.76),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   const Text(
-                    '카메라 없이,\n가족의 안전을 확인하세요',
+                    '카메라 없이,\n집 안 안전을 확인하세요',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -80,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'WiFi 센싱으로 집 안의 생활 움직임을 해석하고, 필요한 순간 보호자와 어르신에게 맞는 정보를 보여줘요.',
+                    'WiFi 신호로 생활 움직임을 해석하고, 보호자와 피보호자에게 필요한 위치·상태·대응 정보를 정리해요.',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.86),
                       height: 1.5,
@@ -98,12 +145,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Icon(
                           Icons.auto_awesome_rounded,
-                          color: Color(0xFFFFE082),
+                            color: Color(0xFFFFE082),
                         ),
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            '보호자는 위험 대응, 피보호자는 내 생활 리듬과 위치 공유를 관리해요.',
+                            '보호자는 위험 알림과 대응을, 피보호자는 위치 공유와 도움 요청을 관리해요.',
                             style: TextStyle(
                               color: Colors.white,
                               height: 1.35,
@@ -119,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              '시작할 모드를 선택하세요',
+              '사용할 모드를 선택하세요',
               style: TextStyle(
                 fontSize: 21,
                 fontWeight: FontWeight.w900,
@@ -132,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onChanged: (role) => setState(() => _selectedRole = role),
             ),
             const SizedBox(height: 20),
-            if (_selectedRole == AppRole.guardian) ...[
+            if (isGuardian) ...[
               _LoginField(
                 controller: _idController,
                 label: '아이디',
@@ -160,9 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
               label: _loading ? '시작하는 중...' : '${_selectedRole.title}로 시작하기',
               icon: Icons.login_rounded,
               onPressed: _loading ? () {} : _signIn,
-              color: _selectedRole == AppRole.guardian
-                  ? AppColors.primary
-                  : AppColors.success,
+              color: isGuardian ? AppColors.primary : AppColors.success,
             ),
           ],
         ),
@@ -222,9 +267,8 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return PressableScale(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(16),
@@ -235,6 +279,13 @@ class _RoleCard extends StatelessWidget {
             color: selected ? color : AppColors.border,
             width: selected ? 2 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: selected ? 0.14 : 0.06),
+              blurRadius: selected ? 22 : 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

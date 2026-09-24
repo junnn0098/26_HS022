@@ -16,15 +16,17 @@ def parse_csi_to_location(csi_data: list[float]) -> tuple[float, float]:
 
 
 def room_from_position(x: float, y: float) -> str:
-    if x > 0.62 and y < 0.42:
+    if x < 0.50 and y < 0.39:
+        return "침실-2"
+    if x >= 0.50 and y < 0.255:
         return "주방"
-    if x < 0.48 and y > 0.58:
-        return "침실"
-    if x > 0.68 and y > 0.55:
-        return "현관"
-    if 0.47 < x < 0.68 and y > 0.56:
+    if x < 0.50 and y < 0.565:
+        return "거실"
+    if 0.50 <= x < 0.72 and y < 0.565:
         return "욕실"
-    return "거실"
+    if x < 0.50 and y >= 0.565:
+        return "침실-1"
+    return "현관"
 
 
 def get_timestamp() -> str:

@@ -39,17 +39,51 @@ class EventPreset:
     status: str
     pose: str
     confidence: float
+    breathing_rate: float
+    breathing_confidence: float
 
 
 EVENT_PRESETS: dict[str, EventPreset] = {
     # living room, normal standing state
-    "normal": EventPreset(x=0.35, y=0.45, status="normal", pose="standing", confidence=0.88),
+    "normal": EventPreset(
+        x=0.35,
+        y=0.45,
+        status="normal",
+        pose="standing",
+        confidence=0.88,
+        breathing_rate=16.8,
+        breathing_confidence=0.84,
+    ),
     # entrance / going out warning
-    "out": EventPreset(x=0.76, y=0.68, status="out", pose="walking", confidence=0.88),
+    "out": EventPreset(
+        x=0.76,
+        y=0.68,
+        status="out",
+        pose="walking",
+        confidence=0.88,
+        breathing_rate=18.4,
+        breathing_confidence=0.82,
+    ),
     # bedroom stillness warning
-    "still": EventPreset(x=0.31, y=0.68, status="still", pose="sitting", confidence=0.83),
+    "still": EventPreset(
+        x=0.31,
+        y=0.68,
+        status="still",
+        pose="sitting",
+        confidence=0.83,
+        breathing_rate=13.6,
+        breathing_confidence=0.78,
+    ),
     # fall suspicion danger
-    "danger": EventPreset(x=0.36, y=0.45, status="danger", pose="lying", confidence=0.91),
+    "danger": EventPreset(
+        x=0.36,
+        y=0.45,
+        status="danger",
+        pose="lying",
+        confidence=0.91,
+        breathing_rate=24.1,
+        breathing_confidence=0.84,
+    ),
 }
 
 
@@ -132,6 +166,8 @@ def build_payload(
     status: str | None = None,
     pose: str | None = None,
     confidence: float | None = None,
+    breathing_rate: float | None = None,
+    breathing_confidence: float | None = None,
     room: str | None = None,
     source: str = "jetson_orin",
     hold_ms: int = DEFAULT_HOLD_MS,
@@ -143,6 +179,20 @@ def build_payload(
         "status": status or preset.status,
         "pose": pose or preset.pose,
         "confidence": round(clamp(float(confidence if confidence is not None else preset.confidence)), 2),
+        "breathingRate": round(
+            clamp(float(breathing_rate if breathing_rate is not None else preset.breathing_rate), 6.0, 36.0),
+            1,
+        ),
+        "breathingConfidence": round(
+            clamp(
+                float(
+                    breathing_confidence
+                    if breathing_confidence is not None
+                    else preset.breathing_confidence
+                )
+            ),
+            2,
+        ),
         "source": source,
         "holdMs": int(hold_ms),
     }
@@ -170,6 +220,14 @@ def payload_from_ai_record(record: dict[str, Any], args: argparse.Namespace) -> 
         status=record.get("status", preset.status),
         pose=record.get("pose", preset.pose),
         confidence=record.get("confidence", record.get("probability", preset.confidence)),
+        breathing_rate=record.get(
+            "breathingRate",
+            record.get("respirationRate", record.get("breathRate", preset.breathing_rate)),
+        ),
+        breathing_confidence=record.get(
+            "breathingConfidence",
+            record.get("respirationConfidence", preset.breathing_confidence),
+        ),
         room=record.get("room"),
         source=args.source,
         hold_ms=args.hold_ms,
@@ -201,6 +259,7 @@ def print_result(name: str, payload: dict[str, Any], result: dict[str, Any]) -> 
         f"x={location.get('x')}",
         f"y={location.get('y')}",
         f"confidence={location.get('confidence')}",
+        f"breathingRate={location.get('breathingRate')}",
     )
 
 
@@ -223,6 +282,8 @@ def command_once(args: argparse.Namespace) -> int:
         status=args.status,
         pose=args.pose,
         confidence=args.confidence,
+        breathing_rate=args.breathing_rate,
+        breathing_confidence=args.breathing_confidence,
         room=args.room,
         source=args.source,
         hold_ms=args.hold_ms,
@@ -247,6 +308,11 @@ def command_sequence(args: argparse.Namespace) -> int:
                     status=options.get("status", preset.status),
                     pose=options.get("pose", preset.pose),
                     confidence=options.get("confidence", preset.confidence),
+                    breathing_rate=options.get("breathingRate", preset.breathing_rate),
+                    breathing_confidence=options.get(
+                        "breathingConfidence",
+                        preset.breathing_confidence,
+                    ),
                     source=args.source,
                     hold_ms=args.hold_ms,
                 )
@@ -320,6 +386,8 @@ def build_parser() -> argparse.ArgumentParser:
     once.add_argument("--status", choices=["normal", "out", "danger", "still"])
     once.add_argument("--pose", choices=["standing", "walking", "lying", "sitting"])
     once.add_argument("--confidence", type=float)
+    once.add_argument("--breathing-rate", type=float, help="Breaths per minute sent as breathingRate")
+    once.add_argument("--breathing-confidence", type=float, help="Breathing signal confidence, 0.0~1.0")
     once.add_argument("--room", help="Optional room name. Usually omit this and let the server calculate from x/y.")
     once.set_defaults(func=command_once)
 

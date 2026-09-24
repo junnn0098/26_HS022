@@ -187,6 +187,8 @@ fall, fallen, lying, danger -> danger
   "status": "danger",
   "pose": "lying",
   "confidence": 0.91,
+  "breathingRate": 24.1,
+  "breathingConfidence": 0.84,
   "source": "jetson_orin",
   "holdMs": 60000
 }
@@ -198,9 +200,11 @@ fall, fallen, lying, danger -> danger
 | `status` | `normal`, `out`, `still`, `danger` |
 | `pose` | `standing`, `walking`, `sitting`, `lying` |
 | `confidence` | AI/센서 판단 신뢰도 |
+| `breathingRate` | 호흡수 참고값, 분당 호흡 횟수 |
+| `breathingConfidence` | 호흡 신호 판단 확실도, 0.0~1.0 |
 | `source` | 데이터 출처. 기본값 `jetson_orin` |
 | `holdMs` | 서버가 해당 상태를 유지할 시간 |
 
 ## 발표/개발 설명
 
-> Jetson Orin에는 센서/AI 결과를 서버로 보내는 edge client를 구성했습니다. 현재는 mock 시나리오로 정상, 현관 접근, 장시간 무반응, 낙상 의심을 서버에 전송할 수 있고, 이후 실제 WiFi CSI 1D-CNN 모델 출력값을 같은 JSON 형식으로 연결하면 앱 화면과 보호자 알림에 반영되는 구조입니다.
+> Jetson Orin에는 센서/AI 결과를 서버로 보내는 edge client를 구성했습니다. 현재는 mock 시나리오로 정상, 현관 접근, 장시간 무반응, 낙상 의심과 호흡 리듬 참고값을 서버에 전송할 수 있고, 이후 실제 WiFi CSI 1D-CNN 모델 출력값을 같은 JSON 형식으로 연결하면 앱 화면과 보호자 알림에 반영되는 구조입니다.

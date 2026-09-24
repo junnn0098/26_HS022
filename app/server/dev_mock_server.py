@@ -28,15 +28,17 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, body: dict):
 
 
 def _room_from_position(x: float, y: float) -> str:
-    if x > 0.62 and y < 0.42:
+    if x < 0.50 and y < 0.39:
+        return "침실-2"
+    if x >= 0.50 and y < 0.255:
         return "주방"
-    if x < 0.48 and y > 0.58:
-        return "침실"
-    if x > 0.68 and y > 0.55:
-        return "현관"
-    if 0.47 < x < 0.68 and y > 0.56:
+    if x < 0.50 and y < 0.565:
+        return "거실"
+    if 0.50 <= x < 0.72 and y < 0.565:
         return "욕실"
-    return "거실"
+    if x < 0.50 and y >= 0.565:
+        return "침실-1"
+    return "현관"
 
 
 def _status_for_tick(tick: int) -> str:
@@ -52,7 +54,19 @@ def _pose_from_status(status: str) -> str:
         return "lying"
     if status == "out":
         return "walking"
+    if status == "still":
+        return "sitting"
     return "standing"
+
+
+def _breathing_rate_from_status(status: str) -> float:
+    if status == "danger":
+        return 23.8
+    if status == "still":
+        return 13.6
+    if status == "out":
+        return 18.4
+    return 16.8
 
 
 def _next_location(tick: int) -> dict:
@@ -69,6 +83,9 @@ def _next_location(tick: int) -> dict:
         "room": _room_from_position(x, y),
         "pose": _pose_from_status(status),
         "confidence": 0.86,
+        "breathingRate": round(_breathing_rate_from_status(status) + math.sin(angle) * 0.6, 1),
+        "breathingConfidence": 0.66,
+        "breathingEstimated": True,
         "timestamp": datetime.now().strftime("%H:%M:%S"),
     }
 

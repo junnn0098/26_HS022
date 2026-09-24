@@ -52,23 +52,39 @@ class _HaniumAppState extends State<HaniumApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hanium Safety',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      home: _signedIn
-          ? _role == AppRole.guardian
-                ? MainShell(
-                    controller: _controller,
-                    onSwitchRole: () => _setRole(AppRole.careRecipient),
-                  )
-                : CareRecipientScreen(
-                    controller: _controller,
-                    onSwitchRole: () => _setRole(AppRole.guardian),
-                  )
-          : LoginScreen(
-              onSignedIn: (role) => _setRole(role),
-            ),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final largeTextMode = _controller.snapshot.settingBool(
+          'largeTextMode',
+          false,
+        );
+        return MaterialApp(
+          title: '한이음 어플',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(largeTextMode ? 1.34 : 1.0),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          home: _signedIn
+              ? _role == AppRole.guardian
+                    ? MainShell(
+                        controller: _controller,
+                        onSwitchRole: () => _setRole(AppRole.careRecipient),
+                      )
+                    : CareRecipientScreen(
+                        controller: _controller,
+                        onSwitchRole: () => _setRole(AppRole.guardian),
+                      )
+              : LoginScreen(onSignedIn: (role) => _setRole(role)),
+        );
+      },
     );
   }
 }

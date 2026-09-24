@@ -17,10 +17,21 @@ router = APIRouter()
 active_connections: list[WebSocket] = []
 
 
+def _breathing_rate_from_status(status: str) -> float:
+    if status == "danger":
+        return 23.8
+    if status == "still":
+        return 13.6
+    if status == "out":
+        return 18.4
+    return 16.8
+
+
 def _location_payload(location: dict) -> LocationData:
     x = float(location.get("x", 0.34))
     y = float(location.get("y", 0.45))
     status = location.get("status", "normal")
+    breathing_rate = float(location.get("breathingRate", _breathing_rate_from_status(status)))
     return LocationData(
         x=x,
         y=y,
@@ -28,6 +39,9 @@ def _location_payload(location: dict) -> LocationData:
         room=location.get("room") or room_from_position(x, y),
         pose=location.get("pose") or pose_from_status(status),
         confidence=float(location.get("confidence", 0.86)),
+        breathingRate=breathing_rate,
+        breathingConfidence=float(location.get("breathingConfidence", 0.66)),
+        breathingEstimated=bool(location.get("breathingEstimated", True)),
         timestamp=location.get("timestamp") or get_timestamp(),
     )
 
@@ -80,6 +94,9 @@ async def websocket_location(websocket: WebSocket):
                 room=room,
                 pose=pose,
                 confidence=float(latest.get("confidence", 0.86)),
+                breathingRate=float(latest.get("breathingRate", _breathing_rate_from_status(status))),
+                breathingConfidence=float(latest.get("breathingConfidence", 0.66)),
+                breathingEstimated=bool(latest.get("breathingEstimated", True)),
                 timestamp=latest.get("timestamp") or get_timestamp(),
             )
 
@@ -91,6 +108,9 @@ async def websocket_location(websocket: WebSocket):
                     "room": data.room,
                     "pose": data.pose,
                     "confidence": data.confidence,
+                    "breathingRate": data.breathingRate,
+                    "breathingConfidence": data.breathingConfidence,
+                    "breathingEstimated": data.breathingEstimated,
                     "source": latest.get("source", "mock"),
                 }
             )

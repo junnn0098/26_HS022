@@ -8,11 +8,7 @@ import '../home_map/home_map_screen.dart';
 import '../settings/settings_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({
-    required this.controller,
-    required this.onSwitchRole,
-    super.key,
-  });
+  const MainShell({required this.controller, required this.onSwitchRole, super.key});
 
   final SafetyController controller;
   final VoidCallback onSwitchRole;
@@ -50,15 +46,9 @@ class _MainShellState extends State<MainShell> {
         label: const Text('피보호자 모드'),
       ),
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryDark.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, -8),
-            ),
-          ],
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: SafeArea(
           child: NavigationBar(

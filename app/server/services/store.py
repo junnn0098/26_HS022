@@ -19,6 +19,8 @@ DEFAULT_SETTINGS = {
     "intrusionDetection": True,
     "showPath": True,
     "showSensors": True,
+    "locationSharingEnabled": True,
+    "largeTextMode": False,
     "miniatureSize": "medium",
 }
 
@@ -37,6 +39,9 @@ DEFAULT_LOCATION = {
     "room": "거실",
     "pose": "standing",
     "confidence": 0.86,
+    "breathingRate": 16.8,
+    "breathingConfidence": 0.66,
+    "breathingEstimated": True,
     "source": "mock",
     "timestamp": "00:00:00",
 }
@@ -81,16 +86,25 @@ def _clamp_number(value: Any, fallback: float, minimum: float = 0, maximum: floa
     return max(minimum, min(maximum, number))
 
 
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 def _room_from_position(x: float, y: float) -> str:
-    if x > 0.62 and y < 0.42:
+    if x < 0.50 and y < 0.39:
+        return "침실-2"
+    if x >= 0.50 and y < 0.255:
         return "주방"
-    if x < 0.48 and y > 0.58:
-        return "침실"
-    if x > 0.68 and y > 0.55:
-        return "현관"
-    if 0.47 < x < 0.68 and y > 0.56:
+    if x < 0.50 and y < 0.565:
+        return "거실"
+    if 0.50 <= x < 0.72 and y < 0.565:
         return "욕실"
-    return "거실"
+    if x < 0.50 and y >= 0.565:
+        return "침실-1"
+    return "현관"
 
 
 def _pose_from_status(status: str) -> str:
@@ -101,6 +115,16 @@ def _pose_from_status(status: str) -> str:
     if status == "still":
         return "sitting"
     return "standing"
+
+
+def _breathing_rate_from_status(status: str) -> float:
+    if status == "danger":
+        return 23.8
+    if status == "still":
+        return 13.6
+    if status == "out":
+        return 18.4
+    return 16.8
 
 
 def _load() -> dict[str, Any]:
@@ -161,6 +185,15 @@ def update_location(next_location: dict[str, Any]) -> dict[str, Any]:
     status = next_location.get("status")
     if status not in {"normal", "out", "danger", "still"}:
         status = _state["location"].get("status", "normal")
+    breathing_rate_value = _first_present(
+        next_location.get("breathingRate"),
+        next_location.get("respirationRate"),
+        next_location.get("breathRate"),
+    )
+    breathing_confidence_value = _first_present(
+        next_location.get("breathingConfidence"),
+        next_location.get("respirationConfidence"),
+    )
 
     _state["location"] = {
         **_state["location"],
@@ -172,6 +205,25 @@ def update_location(next_location: dict[str, Any]) -> dict[str, Any]:
         "confidence": round(
             _clamp_number(next_location.get("confidence"), 0.86),
             2,
+        ),
+        "breathingRate": round(
+            _clamp_number(
+                breathing_rate_value,
+                _breathing_rate_from_status(status),
+                6,
+                36,
+            ),
+            1,
+        ),
+        "breathingConfidence": round(
+            _clamp_number(
+                breathing_confidence_value,
+                0.66,
+            ),
+            2,
+        ),
+        "breathingEstimated": bool(
+            next_location.get("breathingEstimated", breathing_rate_value is None)
         ),
         "source": next_location.get("source") or "sensor",
         "timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -227,6 +279,27 @@ def resolve_alerts() -> list[dict[str, Any]]:
         {**alert, "urgent": False, "resolved": True}
         for alert in _state["alerts"]
     ]
+    _save()
+    return _state["alerts"]
+
+
+def delete_alert(alert_id: int) -> bool:
+    def parsed_id(alert: dict[str, Any]) -> int:
+        try:
+            return int(alert.get("id", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    before = len(_state["alerts"])
+    _state["alerts"] = [alert for alert in _state["alerts"] if parsed_id(alert) != alert_id]
+    deleted = len(_state["alerts"]) != before
+    if deleted:
+        _save()
+    return deleted
+
+
+def clear_alerts() -> list[dict[str, Any]]:
+    _state["alerts"] = []
     _save()
     return _state["alerts"]
 

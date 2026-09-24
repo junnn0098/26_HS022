@@ -26,6 +26,10 @@ class GuardianDelete(BaseModel):
     id: int
 
 
+class AlertDelete(BaseModel):
+    id: int
+
+
 class ScenarioRequest(BaseModel):
     status: str = "danger"
     seconds: int = 12
@@ -38,6 +42,11 @@ class SensorLocationUpdate(BaseModel):
     room: str | None = None
     pose: str | None = None
     confidence: float = 0.86
+    breathingRate: float | None = None
+    respirationRate: float | None = None
+    breathRate: float | None = None
+    breathingConfidence: float | None = None
+    respirationConfidence: float | None = None
     source: str = "sensor"
 
 
@@ -59,6 +68,21 @@ def get_alerts():
 @router.post("/alerts/resolve")
 def resolve_alerts():
     return {"status": "resolved", "alerts": store.resolve_alerts()}
+
+
+@router.post("/alerts/delete")
+def delete_alert(body: AlertDelete):
+    deleted = store.delete_alert(body.id)
+    return {
+        "status": "deleted" if deleted else "not_found",
+        "deleted": deleted,
+        "alerts": store.list_alerts(),
+    }
+
+
+@router.post("/alerts/clear")
+def clear_alerts():
+    return {"status": "cleared", "alerts": store.clear_alerts()}
 
 
 @router.get("/settings")
@@ -197,7 +221,7 @@ async def run_scenario(body: ScenarioRequest):
             "x": 0.31,
             "y": 0.68,
             "status": "still",
-            "room": "침실",
+            "room": "침실-1",
             "pose": "sitting",
             "confidence": 0.83,
             "source": "scenario",
@@ -224,8 +248,8 @@ async def run_scenario(body: ScenarioRequest):
         store.add_alert(
             alert_type="warning",
             title="장시간 움직임이 적어요",
-            message="침실에서 움직임이 오래 감지되지 않았어요.",
-            room="침실",
+            message="침실-1에서 움직임이 오래 감지되지 않았어요.",
+            room="침실-1",
         )
 
     await websocket_router.broadcast_location(location)

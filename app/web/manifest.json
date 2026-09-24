@@ -1,11 +1,11 @@
 {
-    "name": "hanium_app",
-    "short_name": "hanium_app",
+    "name": "한이음 어플",
+    "short_name": "한이음 어플",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "WiFi CSI 기반 보호자 안전 확인 앱",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

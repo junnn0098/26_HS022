@@ -11,6 +11,8 @@ const REAL_SENSOR_ONLY = String(process.env.REAL_SENSOR_ONLY || "")
   .toLowerCase() === "true";
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const STATE_FILE = path.join(__dirname, "dev_state.json");
+const WARNING_NOTIFICATION_CHANNEL_ID = "hanium_warning_alerts_v2";
+const WARNING_NOTIFICATION_SOUND = "hanium_warning_alert";
 
 const defaultState = {
   tokens: [],
@@ -27,6 +29,7 @@ const defaultState = {
     showPath: true,
     showSensors: true,
     locationSharingEnabled: true,
+    largeTextMode: false,
     miniatureSize: "medium",
   },
   emergencyInfo: {
@@ -399,8 +402,9 @@ async function sendFcmMessage(token, alert, location = null) {
       android: {
         priority: "HIGH",
         notification: {
-          sound: "default",
-          notification_priority: "PRIORITY_HIGH",
+          channel_id: WARNING_NOTIFICATION_CHANNEL_ID,
+          sound: WARNING_NOTIFICATION_SOUND,
+          notification_priority: "PRIORITY_MAX",
         },
       },
       data: {
@@ -476,11 +480,12 @@ function sendPushForAlert(alert, location = null, options = {}) {
 }
 
 function roomFromPosition(x, y) {
-  if (x > 0.62 && y < 0.42) return "주방";
-  if (x < 0.48 && y > 0.58) return "침실";
-  if (x > 0.68 && y > 0.55) return "현관";
-  if (x > 0.47 && x < 0.68 && y > 0.56) return "욕실";
-  return "거실";
+  if (x < 0.50 && y < 0.39) return "침실-2";
+  if (x >= 0.50 && y < 0.255) return "주방";
+  if (x < 0.50 && y < 0.565) return "거실";
+  if (x >= 0.50 && x < 0.72 && y < 0.565) return "욕실";
+  if (x < 0.50 && y >= 0.565) return "침실-1";
+  return "현관";
 }
 
 function statusForTick(tick) {
@@ -503,12 +508,19 @@ function confidenceFromStatus(status) {
   return 0.88;
 }
 
+function breathingRateFromStatus(status) {
+  if (status === "danger") return 23.8;
+  if (status === "still") return 13.6;
+  if (status === "out") return 18.4;
+  return 16.8;
+}
+
 function presetForStatus(status) {
   if (status === "out") {
     return { x: 0.76, y: 0.66, room: "현관" };
   }
   if (status === "still") {
-    return { x: 0.31, y: 0.68, room: "침실" };
+    return { x: 0.31, y: 0.68, room: "침실-1" };
   }
   if (status === "danger") {
     return { x: 0.35, y: 0.45, room: "거실" };
@@ -523,16 +535,63 @@ function normalizeNumber(value, fallback, min = 0, max = 1) {
 }
 
 function normalizeStatus(status) {
-  return ["normal", "out", "danger", "still"].includes(status)
-    ? status
-    : "normal";
+  const raw = String(status || "").toLowerCase().trim();
+  if (["danger", "fall", "fallen", "lying"].includes(raw)) return "danger";
+  if (["out", "exit", "intrusion", "entrance"].includes(raw)) return "out";
+  if (["still", "inactive", "sitting", "no_motion"].includes(raw)) return "still";
+  return "normal";
 }
 
 function normalizeRoom(room, x, y) {
   const value = typeof room === "string" ? room.trim() : "";
-  const validRooms = ["거실", "주방", "침실", "욕실", "현관"];
+  const validRooms = ["거실", "주방", "침실", "침실-1", "침실-2", "욕실", "현관"];
   if (validRooms.includes(value)) return value;
   return roomFromPosition(x, y);
+}
+
+function sensorPayloadWarnings(input = {}) {
+  const warnings = [];
+  const x = Number(input.x);
+  const y = Number(input.y);
+  const confidence = Number(input.confidence);
+  const rawStatus = String(input.status || "").toLowerCase().trim();
+  const acceptedStatus = [
+    "normal",
+    "out",
+    "danger",
+    "still",
+    "fall",
+    "fallen",
+    "lying",
+    "exit",
+    "intrusion",
+    "entrance",
+    "inactive",
+    "sitting",
+    "no_motion",
+  ];
+
+  if (!Number.isFinite(x)) warnings.push("x is missing or invalid; fallback coordinate was used.");
+  else if (x < 0 || x > 1) warnings.push("x was outside 0.0~1.0 and was clamped.");
+
+  if (!Number.isFinite(y)) warnings.push("y is missing or invalid; fallback coordinate was used.");
+  else if (y < 0 || y > 1) warnings.push("y was outside 0.0~1.0 and was clamped.");
+
+  if (!rawStatus) {
+    warnings.push("status is missing; 'normal' was used.");
+  } else if (!acceptedStatus.includes(rawStatus)) {
+    warnings.push(`status '${input.status}' is not recognized and was normalized to 'normal'.`);
+  }
+
+  if (input.confidence !== undefined) {
+    if (!Number.isFinite(confidence)) warnings.push("confidence is invalid; fallback confidence was used.");
+    else if (confidence < 0 || confidence > 1) {
+      warnings.push("confidence was outside 0.0~1.0 and was clamped.");
+    }
+  }
+
+  if (!input.source) warnings.push("source is missing; 'sensor' was used.");
+  return warnings;
 }
 
 function normalizeLocation(input = {}) {
@@ -547,6 +606,20 @@ function normalizeLocation(input = {}) {
     0,
     1,
   );
+  const rawBreathingRate = input.breathingRate ?? input.respirationRate ?? input.breathRate;
+  const breathingEstimated = rawBreathingRate === undefined || rawBreathingRate === null;
+  const breathingRate = normalizeNumber(
+    rawBreathingRate,
+    breathingRateFromStatus(status),
+    6,
+    36,
+  );
+  const breathingConfidence = normalizeNumber(
+    input.breathingConfidence ?? input.respirationConfidence,
+    breathingEstimated ? 0.66 : 0.84,
+    0,
+    1,
+  );
 
   return {
     x: Number(x.toFixed(3)),
@@ -555,6 +628,9 @@ function normalizeLocation(input = {}) {
     room,
     pose,
     confidence: Number(confidence.toFixed(2)),
+    breathingRate: Number(breathingRate.toFixed(1)),
+    breathingConfidence: Number(breathingConfidence.toFixed(2)),
+    breathingEstimated,
     source: input.source || "sensor",
     timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }),
   };
@@ -611,6 +687,9 @@ function nextLocation(tick) {
     room: roomFromPosition(x, y),
     pose: poseFromStatus(status),
     confidence: 0.86,
+    breathingRate: Number((breathingRateFromStatus(status) + Math.sin(angle) * 0.6).toFixed(1)),
+    breathingConfidence: 0.66,
+    breathingEstimated: true,
     timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }),
   };
 }
@@ -824,10 +903,15 @@ function broadcastLocation(location) {
 }
 
 function updateSensorLocation(body = {}) {
+  const warnings = sensorPayloadWarnings(body);
   latestLocation = normalizeLocation(body);
   manualSensorUntil = Date.now() + Number(body.holdMs || 60000);
   broadcastLocation(latestLocation);
-  return publicLocation(latestLocation);
+  return {
+    accepted: warnings.length === 0,
+    warnings,
+    location: publicLocation(latestLocation),
+  };
 }
 
 function adminHtml() {
@@ -1082,7 +1166,7 @@ function adminHtml() {
       <div class="map" id="map">
         <div class="room living">거실</div>
         <div class="room kitchen">주방</div>
-        <div class="room bed">침실</div>
+        <div class="room bed">침실-1</div>
         <div class="room bath">욕실</div>
         <div class="room door">현관</div>
         <div class="sensor" style="left:8%;top:8%"></div>
@@ -1140,7 +1224,7 @@ function adminHtml() {
           <button onclick="scenario('normal', { x: .35, y: .45, room: '거실' })">정상</button>
           <button onclick="scenario('out', { x: .76, y: .66, room: '현관' })">현관</button>
         </div>
-        <button onclick="scenario('still', { x: .31, y: .68, room: '침실' })">장시간 무반응</button>
+        <button onclick="scenario('still', { x: .31, y: .68, room: '침실-1' })">장시간 무반응</button>
         <button class="danger" onclick="scenario('danger')">낙상 의심 발생</button>
         <button class="dark" onclick="resolveAlerts()">알림 확인 완료</button>
         <button onclick="resetDemo()">시연 상태 초기화</button>
@@ -1160,7 +1244,7 @@ function adminHtml() {
       ["시연 시작", "서버와 앱 연결을 초기화하고 정상 상태로 맞춥니다."],
       ["평소 상태", "거실에서 평소와 비슷한 움직임이 감지되는 장면입니다."],
       ["현관 접근", "현관 쪽 이동을 외출 가능성으로 보여줍니다."],
-      ["장시간 무반응", "침실에서 오랫동안 움직임이 적은 상태를 보여줍니다."],
+      ["장시간 무반응", "침실-1에서 오랫동안 움직임이 적은 상태를 보여줍니다."],
       ["낙상 의심", "거실 소파 근처에서 급격한 쓰러짐 패턴을 보여줍니다."],
       ["안전 확인", "보호자가 확인한 뒤 알림을 정리하고 정상 상태로 복구합니다."],
     ];
@@ -1198,11 +1282,12 @@ function adminHtml() {
     }
 
     function roomFromPosition(x, y) {
-      if (x > 0.62 && y < 0.42) return "주방";
-      if (x < 0.48 && y > 0.58) return "침실";
-      if (x > 0.68 && y > 0.55) return "현관";
-      if (x > 0.47 && x < 0.68 && y > 0.56) return "욕실";
-      return "거실";
+      if (x < 0.50 && y < 0.39) return "침실-2";
+      if (x >= 0.50 && y < 0.255) return "주방";
+      if (x < 0.50 && y < 0.565) return "거실";
+      if (x >= 0.50 && x < 0.72 && y < 0.565) return "욕실";
+      if (x < 0.50 && y >= 0.565) return "침실-1";
+      return "현관";
     }
 
     function poseFromStatus(status) {
@@ -1221,7 +1306,7 @@ function adminHtml() {
 
     function defaultPointForStatus(status) {
       if (status === "out") return { x: .76, y: .66, room: "현관" };
-      if (status === "still") return { x: .31, y: .68, room: "침실" };
+      if (status === "still") return { x: .31, y: .68, room: "침실-1" };
       if (status === "danger") return { x: .35, y: .45, room: "거실" };
       return { x: .35, y: .45, room: "거실" };
     }
@@ -1377,9 +1462,9 @@ function adminHtml() {
       await scenario("still", {
         x: .31,
         y: .68,
-        room: "침실",
+        room: "침실-1",
         step: 3,
-        message: "장시간 무반응: 침실에서 움직임이 적은 상태입니다. 앱의 주의 알림을 확인하세요.",
+        message: "장시간 무반응: 침실-1에서 움직임이 적은 상태입니다. 앱의 주의 알림을 확인하세요.",
       });
     }
 
@@ -1503,6 +1588,68 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && url.pathname === "/location/latest") {
     return sendJson(res, 200, { location: publicLocation(ensureLatestLocation()) });
   }
+  if (req.method === "GET" && url.pathname === "/sensor/schema") {
+    return sendJson(res, 200, {
+      endpoint: "POST /sensor/update",
+      contentType: "application/json",
+      coordinateSystem: {
+        origin: "ESP32-1 top-left corner",
+        normalizedRange: "0.0 ~ 1.0",
+        realSizeMeters: { width: 4.5, height: 8.1 },
+        grid: "10 x 18 blocks, 1 block = 45cm",
+      },
+      requiredFields: {
+        x: "number, 0.0~1.0",
+        y: "number, 0.0~1.0",
+        status: "normal | out | still | danger | fall | fallen | no_motion",
+      },
+      optionalFields: {
+        room: "거실 | 주방 | 침실-1 | 침실-2 | 욕실 | 현관",
+        pose: "standing | walking | sitting | lying",
+        confidence: "number, 0.0~1.0",
+        breathingRate: "number, breaths per minute. alias: respirationRate, breathRate",
+        breathingConfidence: "number, 0.0~1.0. alias: respirationConfidence",
+        source: "jetson | esp32 | sensor | admin | mock",
+        holdMs: "number, milliseconds to keep manual value",
+      },
+      example: {
+        x: 0.76,
+        y: 0.68,
+        status: "danger",
+        room: "현관",
+        pose: "lying",
+        confidence: 0.92,
+        breathingRate: 24.1,
+        breathingConfidence: 0.84,
+        source: "jetson",
+        holdMs: 60000,
+      },
+    });
+  }
+  if (req.method === "GET" && url.pathname === "/sensor/test-command") {
+    const host = req.headers.host || `127.0.0.1:${PORT}`;
+    const uri = `http://${host}/sensor/update`;
+    const body = {
+      x: 0.76,
+      y: 0.68,
+      status: "danger",
+      room: "현관",
+      pose: "lying",
+      confidence: 0.92,
+      breathingRate: 24.1,
+      breathingConfidence: 0.84,
+      source: "jetson",
+      holdMs: 60000,
+    };
+    const bodyText = JSON.stringify(body).replace(/'/g, "''");
+    return sendJson(res, 200, {
+      powershell:
+        `Invoke-RestMethod -Method Post -Uri '${uri}' -ContentType 'application/json; charset=utf-8' -Body '${bodyText}'`,
+      curl:
+        `curl -X POST '${uri}' -H 'Content-Type: application/json' -d '${JSON.stringify(body)}'`,
+      body,
+    });
+  }
   if (req.method === "GET" && url.pathname === "/alerts") {
     return sendJson(res, 200, { alerts });
   }
@@ -1599,6 +1746,22 @@ const server = http.createServer((req, res) => {
     saveState();
     return sendJson(res, 200, { status: "resolved", alerts });
   }
+  if (req.method === "POST" && url.pathname === "/alerts/delete") {
+    readJsonBody(req, (body) => {
+      const id = Number(body.id);
+      const before = alerts.length;
+      alerts = alerts.filter((alert) => Number(alert.id) !== id);
+      const deleted = alerts.length !== before;
+      saveState();
+      sendJson(res, 200, { status: deleted ? "deleted" : "not_found", deleted, alerts });
+    });
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/alerts/clear") {
+    alerts = [];
+    saveState();
+    return sendJson(res, 200, { status: "cleared", alerts });
+  }
   if (req.method === "POST" && url.pathname === "/demo/reset") {
     return sendJson(res, 200, { status: "ok", ...resetDemoState() });
   }
@@ -1656,8 +1819,8 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && url.pathname === "/sensor/update") {
     readJsonBody(req, (body) => {
-      const location = updateSensorLocation(body);
-      sendJson(res, 200, { status: "ok", location });
+      const result = updateSensorLocation(body);
+      sendJson(res, 200, { status: "ok", ...result });
     });
     return;
   }

@@ -11,6 +11,9 @@ class LocationData(BaseModel):
     room: str = "거실"
     pose: Literal["standing", "walking", "lying", "sitting"] = "standing"
     confidence: float = 0.86
+    breathingRate: float = 16.8
+    breathingConfidence: float = 0.66
+    breathingEstimated: bool = True
 
 
 class CSIData(BaseModel):

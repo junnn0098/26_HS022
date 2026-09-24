@@ -41,6 +41,8 @@ Content-Type: application/json
   "status": "out",
   "pose": "walking",
   "confidence": 0.88,
+  "breathingRate": 18.4,
+  "breathingConfidence": 0.84,
   "source": "jetson",
   "holdMs": 60000
 }
@@ -55,6 +57,8 @@ Content-Type: application/json
 | `status` | string | 예 | `normal`, `out`, `danger`, `still` |
 | `pose` | string | 아니오 | `standing`, `walking`, `lying`, `sitting` |
 | `confidence` | number | 아니오 | 추정 신뢰도, 0.0~1.0 |
+| `breathingRate` | number | 아니오 | 호흡수 참고값, 분당 호흡 횟수. `respirationRate`, `breathRate`도 허용 |
+| `breathingConfidence` | number | 아니오 | 호흡 신호 판단 확실도, 0.0~1.0. `respirationConfidence`도 허용 |
 | `source` | string | 아니오 | `jetson`, `admin`, `test` 등 |
 | `holdMs` | number | 아니오 | 이 수동 위치를 유지할 시간(ms) |
 
@@ -75,19 +79,19 @@ PowerShell/터미널 인코딩 문제로 `현관` 같은 한글이 `??`로 깨�
 현관 접근:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.76,"y":0.68,"status":"out","pose":"walking","confidence":0.88,"source":"test","holdMs":60000}'
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.76,"y":0.68,"status":"out","pose":"walking","confidence":0.88,"breathingRate":18.4,"breathingConfidence":0.84,"source":"test","holdMs":60000}'
 ```
 
 낙상 의심:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.36,"y":0.45,"status":"danger","pose":"lying","confidence":0.91,"source":"test","holdMs":60000}'
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.36,"y":0.45,"status":"danger","pose":"lying","confidence":0.91,"breathingRate":24.1,"breathingConfidence":0.84,"source":"test","holdMs":60000}'
 ```
 
 장시간 무반응:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.31,"y":0.68,"status":"still","pose":"sitting","confidence":0.83,"source":"test","holdMs":60000}'
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -ContentType 'application/json' -Body '{"x":0.31,"y":0.68,"status":"still","pose":"sitting","confidence":0.83,"breathingRate":13.6,"breathingConfidence":0.78,"source":"test","holdMs":60000}'
 ```
 
 ## Python 예시

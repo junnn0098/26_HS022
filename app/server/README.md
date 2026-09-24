@@ -60,6 +60,8 @@ start http://127.0.0.1:8000/admin
 - `POST /sensor/reset` : 수동 센서 입력 해제 후 mock 위치로 복귀
 - `GET /alerts` : 알림 목록 조회
 - `POST /alerts/resolve` : 위험 알림 확인 완료 처리
+- `POST /alerts/delete` : 특정 알림 1개 삭제
+- `POST /alerts/clear` : 알림 기록 전체 삭제
 - `POST /demo/reset` : 발표/시연 상태 초기화
 - `GET /settings` : 설정 조회
 - `POST /settings` : 설정 저장
@@ -89,7 +91,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -Content
 ```
 
 PowerShell에서 한글 JSON이 깨질 수 있으므로 테스트 명령에서는 `room`을 생략하는 것을 추천합니다.
-서버가 `x`, `y` 좌표를 기준으로 거실/주방/침실/욕실/현관을 자동 계산합니다.
+서버가 `x`, `y` 좌표를 기준으로 거실/주방/침실-1/침실-2/욕실/현관을 자동 계산합니다.
 
 ## 앱이 꺼져 있어도 오는 FCM 알림
 

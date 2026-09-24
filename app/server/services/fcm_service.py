@@ -7,6 +7,8 @@ from firebase_admin import credentials, messaging
 _tokens: list[str] = []
 _last_alert_time: float = 0
 _COOLDOWN_SECONDS = 60
+WARNING_NOTIFICATION_CHANNEL_ID = "hanium_warning_alerts_v2"
+WARNING_NOTIFICATION_SOUND = "hanium_warning_alert"
 
 
 def init_firebase():
@@ -16,6 +18,15 @@ def init_firebase():
         firebase_admin.initialize_app(cred)
 
 
+
+def warning_android_config():
+    return messaging.AndroidConfig(
+        priority="high",
+        notification=messaging.AndroidNotification(
+            channel_id=WARNING_NOTIFICATION_CHANNEL_ID,
+            sound=WARNING_NOTIFICATION_SOUND,
+        ),
+    )
 def register_token(token: str):
     if token not in _tokens:
         _tokens.append(token)
@@ -38,6 +49,7 @@ def send_fall_alert():
             title="⚠️ 낙상 위험 감지!",
             body="어르신의 낙상이 의심됩니다. 즉시 확인하세요.",
         ),
+        android=warning_android_config(),
         data={"type": "fall_detected"},
         tokens=_tokens,
     )
@@ -52,6 +64,7 @@ def send_test_alert():
             title="🔔 알람 테스트",
             body="테스트 알람입니다. FCM 연결이 정상 동작합니다.",
         ),
+        android=warning_android_config(),
         data={"type": "test"},
         tokens=_tokens,
     )

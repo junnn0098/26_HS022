@@ -13,12 +13,9 @@ class SafetyRepository {
 
   Future<Map<String, dynamic>?> getJson(String path) async {
     try {
-      final response = await _client
-          .get(AppConfig.httpUri(path))
-          .timeout(AppConfig.apiTimeout);
+      final response = await _client.get(AppConfig.httpUri(path)).timeout(AppConfig.apiTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
-      return jsonDecode(utf8.decode(response.bodyBytes))
-          as Map<String, dynamic>;
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
@@ -37,8 +34,7 @@ class SafetyRepository {
           )
           .timeout(AppConfig.apiTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
-      return jsonDecode(utf8.decode(response.bodyBytes))
-          as Map<String, dynamic>;
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
@@ -54,6 +50,12 @@ class SafetyRepository {
   Future<Map<String, dynamic>?> alerts() => getJson('/alerts');
 
   Future<Map<String, dynamic>?> resolveAlerts() => postJson('/alerts/resolve');
+
+  Future<Map<String, dynamic>?> deleteAlert(int id) {
+    return postJson('/alerts/delete', {'id': id});
+  }
+
+  Future<Map<String, dynamic>?> clearAlerts() => postJson('/alerts/clear');
 
   Future<Map<String, dynamic>?> triggerScenario({
     required String status,
@@ -77,19 +79,11 @@ class SafetyRepository {
     return postJson('/settings', {key: value});
   }
 
-  Future<Map<String, dynamic>?> registerDeviceToken(
-    String token, {
-    required AppRole role,
-  }) {
-    return postJson('/device/register', {
-      'token': token,
-      'role': role.serverValue,
-    });
+  Future<Map<String, dynamic>?> registerDeviceToken(String token, {required AppRole role}) {
+    return postJson('/device/register', {'token': token, 'role': role.serverValue});
   }
 
-  Future<Map<String, dynamic>?> notifyCareRecipientSafe({
-    required String room,
-  }) {
+  Future<Map<String, dynamic>?> notifyCareRecipientSafe({required String room}) {
     return postJson('/care-recipient/safe', {'room': room});
   }
 

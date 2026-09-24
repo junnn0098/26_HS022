@@ -18,7 +18,7 @@ extension AppRoleLabel on AppRole {
   String get subtitle {
     return switch (this) {
       AppRole.guardian => '가족의 상태와 위험 알림을 확인해요',
-      AppRole.careRecipient => '내 생활 리듬과 위치 공유를 관리해요',
+      AppRole.careRecipient => '내 위치 공유와 도움 요청을 관리해요',
     };
   }
 }
