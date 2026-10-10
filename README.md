@@ -93,28 +93,35 @@
 **3-2. 데이터 흐름 (저장소 코드 기준)**
 
 ```mermaid
-flowchart LR
-    AP["ipTIME A2004SR<br/>센서 전용 독립망 2.4GHz"] -. WiFi 신호 .-> N1 & N2 & N3 & N4
-    subgraph Sensor["ESP32-S3 수신 노드 × 4 (RuView)"]
-        N1[Node 1]
-        N2[Node 2]
-        N3[Node 3]
-        N4[Node 4]
+flowchart TB
+    AP["📡 ipTIME A2004SR<br/>센서 전용 독립망 (2.4GHz)"]
+
+    subgraph Sensor["① 센서 노드 — ESP32-S3 × 4 (RuView 펌웨어)"]
+        direction LR
+        N1["Node 1"] ~~~ N2["Node 2"] ~~~ N3["Node 3"] ~~~ N4["Node 4"]
     end
-    N1 & N2 & N3 & N4 -- "UDP :5005<br/>ADR-018 CSI" --> LI
-    subgraph Jetson["Jetson Orin Nano (edge_ai/)"]
-        LI["live_inference.py<br/>특징 추출 → multi-node 1D-CNN<br/>→ 낙상 상태기계 · 호흡 추정"]
+
+    subgraph Jetson["② 엣지 AI — Jetson Orin Nano (edge_ai/)"]
+        LI["live_inference.py<br/>특징 추출 → 1D-CNN 추론<br/>낙상 상태기계 · 호흡 추정"]
         ST[("runtime/latest_status.json<br/>events.jsonl")]
         API["status_api.py :8080"]
-        LI --> ST --> API
+        LI --> ST
+        ST --> API
     end
+
+    subgraph Server["③ 로컬 서버 — Node.js :8000 (app/server/)"]
+        SV["dev_mock_server.js<br/>상태 저장 · /admin"]
+    end
+
+    APP["④ Flutter 앱 (app/)<br/>보호자 모드 / 피보호자 모드"]
+    ER["🚑 보호자 대응<br/>어르신 전화 · 119 신고"]
+
+    AP -. "WiFi 신호" .-> Sensor
+    Sensor -- "UDP :5005<br/>ADR-018 CSI 패킷" --> LI
     ST -- "jetson_edge_client.py<br/>POST /sensor/update" --> SV
-    subgraph Server["Node.js 로컬 서버 :8000 (app/server/)"]
-        SV["dev_mock_server.js<br/>상태 저장 · 관리자 웹 /admin"]
-    end
     SV -- "WS /ws/location<br/>실시간 상태 동기화" --> APP
-    SV -- "FCM 긴급 푸시" --> APP
-    APP["Flutter 앱 (app/)<br/>보호자 / 피보호자 모드"] -- "전화 · 119 신고" --> ER["보호자 대응"]
+    SV -. "FCM 긴급 푸시" .-> APP
+    APP --> ER
 ```
 
 **3-3. 낙상 감지 AI 추론 흐름도 (V2)**
