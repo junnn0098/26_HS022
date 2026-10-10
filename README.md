@@ -92,37 +92,7 @@
 
 **3-2. 데이터 흐름 (저장소 코드 기준)**
 
-```mermaid
-flowchart TB
-    AP["📡 ipTIME A2004SR<br/>센서 전용 독립망 (2.4GHz)"]
-
-    subgraph Sensor["① 센서 노드 — ESP32-S3 × 4 (RuView 펌웨어)"]
-        direction LR
-        N1["Node 1"] ~~~ N2["Node 2"] ~~~ N3["Node 3"] ~~~ N4["Node 4"]
-    end
-
-    subgraph Jetson["② 엣지 AI — Jetson Orin Nano (edge_ai/)"]
-        LI["live_inference.py<br/>특징 추출 → 1D-CNN 추론<br/>낙상 상태기계 · 호흡 추정"]
-        ST[("runtime/latest_status.json<br/>events.jsonl")]
-        API["status_api.py :8080"]
-        LI --> ST
-        ST --> API
-    end
-
-    subgraph Server["③ 로컬 서버 — Node.js :8000 (app/server/)"]
-        SV["dev_mock_server.js<br/>상태 저장 · /admin"]
-    end
-
-    APP["④ Flutter 앱 (app/)<br/>보호자 모드 / 피보호자 모드"]
-    ER["🚑 보호자 대응<br/>어르신 전화 · 119 신고"]
-
-    AP -. "WiFi 신호" .-> Sensor
-    Sensor -- "UDP :5005<br/>ADR-018 CSI 패킷" --> LI
-    ST -- "jetson_edge_client.py<br/>POST /sensor/update" --> SV
-    SV -- "WS /ws/location<br/>실시간 상태 동기화" --> APP
-    SV -. "FCM 긴급 푸시" .-> APP
-    APP --> ER
-```
+<p align="center"><img src="docs/images/data_flow.png" alt="데이터 흐름 - 센서 네트워크, 엣지 AI, 로컬 서버, 보호자 앱" width="820"></p>
 
 **3-3. 낙상 감지 AI 추론 흐름도 (V2)**
 
