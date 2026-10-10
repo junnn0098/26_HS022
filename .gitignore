@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+
+# Credentials (anywhere in the repo)
+.env
+*serviceAccount*.json
+*service-account*.json
+*firebase-adminsdk*.json
