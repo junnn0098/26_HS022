@@ -73,7 +73,12 @@ class FallStateMachine:
             if self.state not in (FallState.CONFIRMED, FallState.POST_FALL_CHECK):
                 self._transition(FallState.UNKNOWN, now)
             reason = "low_quality"
-        elif people_count_label == "0":
+        elif people_count_label == "0" and self.state not in (
+            FallState.CONFIRMED,
+            FallState.POST_FALL_CHECK,
+        ):
+            # A person lying still after a fall can look like an empty room, so an
+            # "empty" prediction must never cancel a confirmed or pending alarm.
             self._transition(FallState.NORMAL, now)
             reason = "room_empty"
         elif self.state == FallState.UNKNOWN:

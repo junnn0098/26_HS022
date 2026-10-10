@@ -31,6 +31,30 @@ class FallStateTests(unittest.TestCase):
         decision = machine.update(0.5, {"fall": 0.9}, 1.0, "0")
         self.assertEqual(decision.state, "normal")
 
+    def test_empty_room_prediction_does_not_cancel_confirmed_alarm(self) -> None:
+        # A person lying motionless after a fall can look like an empty room.
+        config = RuntimeConfig(fall_candidate_hits=1, post_fall_lying_hits=1)
+        machine = FallStateMachine(config)
+        machine.update(0.0, {"fall": 0.9}, 1.0, "1")
+        machine.update(0.5, {"lying": 0.9}, 1.0, "1")
+        confirmed = machine.update(1.0, {"lying": 0.9}, 1.0, "1")
+        self.assertTrue(confirmed.alarm)
+        for step in range(5):
+            decision = machine.update(1.5 + step * 0.5, {"lying": 0.2}, 1.0, "0")
+            self.assertTrue(decision.alarm)
+            self.assertEqual(decision.state, "confirmed")
+
+    def test_empty_room_prediction_does_not_cancel_post_fall_check(self) -> None:
+        config = RuntimeConfig(fall_candidate_hits=1, post_fall_lying_hits=2)
+        machine = FallStateMachine(config)
+        machine.update(0.0, {"fall": 0.9}, 1.0, "1")
+        checking = machine.update(0.5, {"lying": 0.9}, 1.0, "1")
+        self.assertEqual(checking.state, "post_fall_check")
+        still_checking = machine.update(1.0, {"lying": 0.9}, 1.0, "0")
+        self.assertNotEqual(still_checking.state, "normal")
+        confirmed = machine.update(1.5, {"lying": 0.9}, 1.0, "0")
+        self.assertTrue(confirmed.alarm)
+
     def test_confirmed_alarm_is_latched_before_recovery(self) -> None:
         config = RuntimeConfig(
             fall_candidate_hits=1,
