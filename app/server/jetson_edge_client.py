@@ -10,9 +10,14 @@ It intentionally uses only the Python standard library so it can run on a
 fresh Jetson setup without installing requests or other packages.
 
 Typical commands:
+  # Real pipeline: forward edge_ai live inference results to the server
+  python3 jetson_edge_client.py live-status --status-file ../../edge_ai/runtime/latest_status.json --server-url http://192.168.0.15:8000
+  python3 jetson_edge_client.py live-status --status-url http://<jetson-ip>:8080/status --server-url http://127.0.0.1:8000
+  ./edge_ai/jetson/run_live.sh | python3 jetson_edge_client.py stdin-json --server-url http://192.168.0.15:8000
+
+  # Demo / test helpers
   python3 jetson_edge_client.py sequence --server-url http://127.0.0.1:8000
   python3 jetson_edge_client.py once --event danger --server-url http://192.168.0.15:8000
-  python3 jetson_edge_client.py stdin-json --server-url http://192.168.0.15:8000
 """
 
 from __future__ import annotations
@@ -30,6 +35,19 @@ from typing import Any
 
 DEFAULT_SERVER_URL = os.environ.get("HANIUM_SERVER_URL", "http://127.0.0.1:8000")
 DEFAULT_HOLD_MS = 60_000
+LIVE_HOLD_MS = 15_000
+LIVE_STATUS_PREFIX = "LIVE_STATUS="
+LIVE_STATUS_SCHEMA_PREFIX = "hanium.ruview.live-status"
+DEFAULT_STATUS_FILE = os.environ.get("RUVIEW_STATUS_FILE", "runtime/latest_status.json")
+
+# edge_ai display activities -> app pose
+LIVE_ACTIVITY_TO_POSE = {
+    "walking": "walking",
+    "sitting": "sitting",
+    "lying": "lying",
+    "fall": "lying",
+    "still": "standing",
+}
 
 
 @dataclass(frozen=True)
@@ -234,6 +252,78 @@ def payload_from_ai_record(record: dict[str, Any], args: argparse.Namespace) -> 
     )
 
 
+def is_live_status(record: dict[str, Any]) -> bool:
+    return str(record.get("schema", "")).startswith(LIVE_STATUS_SCHEMA_PREFIX)
+
+
+def payload_from_live_status(record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    """Convert edge_ai `hanium.ruview.live-status.v2` output into a /sensor/update payload.
+
+    - The fall state machine decides the alarm: only a CONFIRMED fall becomes `danger`.
+    - The model senses one room and does not estimate coordinates, so the marker is
+      placed at the monitored room's floor-plan position given by --room-x/--room-y.
+    - Breathing rate is forwarded only when edge_ai reports a reliable estimate;
+      otherwise it is omitted instead of being filled with a made-up number.
+    """
+    fall = record.get("fall") or {}
+    alarm = bool(fall.get("alarm")) or fall.get("state") == "confirmed"
+    activity = str(record.get("activity") or "unknown")
+    probabilities = record.get("activity_probabilities") or {}
+
+    if alarm:
+        status, pose = "danger", "lying"
+        confidence = probabilities.get("fall", record.get("activity_confidence"))
+    else:
+        status = "normal"
+        pose = LIVE_ACTIVITY_TO_POSE.get(activity, "standing")
+        confidence = record.get("activity_confidence")
+
+    payload: dict[str, Any] = {
+        "x": round(clamp(float(args.room_x)), 3),
+        "y": round(clamp(float(args.room_y)), 3),
+        "status": status,
+        "pose": pose,
+        "source": args.source,
+        "holdMs": int(args.hold_ms),
+    }
+    if confidence is not None:
+        payload["confidence"] = round(clamp(float(confidence)), 2)
+
+    respiratory = (record.get("health") or {}).get("respiratory") or {}
+    breathing_rate = respiratory.get("breathing_rate_bpm")
+    if breathing_rate is not None:
+        payload["breathingRate"] = round(clamp(float(breathing_rate), 6.0, 36.0), 1)
+        breathing_confidence = respiratory.get("breathing_confidence")
+        if breathing_confidence is not None:
+            payload["breathingConfidence"] = round(clamp(float(breathing_confidence)), 2)
+    return payload
+
+
+def parse_json_line(line: str) -> dict[str, Any] | None:
+    """Parse one stdin line. Accepts plain JSON or edge_ai's `LIVE_STATUS=` lines."""
+    line = line.strip()
+    if line.startswith(LIVE_STATUS_PREFIX):
+        line = line[len(LIVE_STATUS_PREFIX):]
+    if not line.startswith("{"):
+        return None  # other log lines from run_live.sh
+    record = json.loads(line)
+    if not isinstance(record, dict):
+        raise ValueError("JSON line must be an object")
+    return record
+
+
+def read_live_status(args: argparse.Namespace) -> dict[str, Any]:
+    if args.status_url:
+        headers = {"Accept": "application/json"}
+        if args.token:
+            headers["Authorization"] = f"Bearer {args.token}"
+        request = urllib.request.Request(args.status_url, headers=headers, method="GET")
+        with urllib.request.urlopen(request, timeout=args.timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    with open(args.status_file, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def send_update(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str, Any]:
     if args.dry_run:
         print(json.dumps({"dryRun": True, "payload": payload}, ensure_ascii=False, indent=2))
@@ -340,18 +430,51 @@ def command_heartbeat(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_live_status(args: argparse.Namespace) -> int:
+    source = args.status_url or args.status_file
+    print(f"[info] server={args.server_url}")
+    print(f"[info] mode=live-status, reading {source} every {args.interval}s, Ctrl+C to stop")
+    last_seen: Any = object()
+    try:
+        while True:
+            try:
+                record = read_live_status(args)
+            except FileNotFoundError:
+                print(f"[wait] {source} not found yet; is run_live.sh running?", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001 - keep polling through transient errors.
+                print(f"[error] could not read live status: {exc}", file=sys.stderr)
+            else:
+                if not is_live_status(record):
+                    print("[error] not a hanium.ruview.live-status payload", file=sys.stderr)
+                elif record.get("unix_time") != last_seen:
+                    last_seen = record.get("unix_time")
+                    payload = payload_from_live_status(record, args)
+                    try:
+                        result = send_update(args, payload)
+                        print_result(f"live:{record.get('fall', {}).get('state', '-')}", payload, result)
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"[error] could not send to server: {exc}", file=sys.stderr)
+            if args.once:
+                break
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        print("\n[info] stopped")
+    return 0
+
+
 def command_stdin_json(args: argparse.Namespace) -> int:
     print("[info] reading JSON lines from stdin", file=sys.stderr)
     print('[info] example: {"label":"fall","confidence":0.92,"x":0.36,"y":0.45}', file=sys.stderr)
+    print("[info] edge_ai LIVE_STATUS= lines are also accepted", file=sys.stderr)
     for line_number, line in enumerate(sys.stdin, start=1):
-        line = line.strip()
-        if not line:
-            continue
         try:
-            record = json.loads(line)
-            if not isinstance(record, dict):
-                raise ValueError("JSON line must be an object")
-            payload = payload_from_ai_record(record, args)
+            record = parse_json_line(line)
+            if record is None:
+                continue
+            if is_live_status(record):
+                payload = payload_from_live_status(record, args)
+            else:
+                payload = payload_from_ai_record(record, args)
             result = send_update(args, payload)
             print_result(f"stdin:{line_number}", payload, result)
         except Exception as exc:  # noqa: BLE001 - keep streaming even if one record is bad.
@@ -368,6 +491,21 @@ def add_common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--timeout", type=float, default=5.0, help="HTTP timeout seconds")
     parser.add_argument("--retries", type=int, default=2, help="Retry count for failed POST requests")
     parser.add_argument("--dry-run", action="store_true", help="Print payloads without sending them")
+
+
+def add_room_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--room-x",
+        type=float,
+        default=EVENT_PRESETS["normal"].x,
+        help="Floor-plan x (0~1) of the monitored room where the sensor set is installed",
+    )
+    parser.add_argument(
+        "--room-y",
+        type=float,
+        default=EVENT_PRESETS["normal"].y,
+        help="Floor-plan y (0~1) of the monitored room where the sensor set is installed",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -402,8 +540,22 @@ def build_parser() -> argparse.ArgumentParser:
     heartbeat.add_argument("--interval", type=float, default=10.0)
     heartbeat.set_defaults(func=command_heartbeat)
 
-    stdin_json = subparsers.add_parser("stdin-json", help="Read AI prediction JSON lines from stdin")
+    live = subparsers.add_parser(
+        "live-status",
+        help="Forward edge_ai live inference results (latest_status.json or status_api /status) to the server",
+    )
+    add_common_options(live)
+    add_room_options(live)
+    live.add_argument("--status-file", default=DEFAULT_STATUS_FILE, help="edge_ai runtime/latest_status.json path")
+    live.add_argument("--status-url", help="Read from status_api instead, e.g. http://<jetson-ip>:8080/status")
+    live.add_argument("--token", default=os.environ.get("RUVIEW_API_TOKEN", ""), help="status_api bearer token")
+    live.add_argument("--interval", type=float, default=1.0, help="Polling interval seconds")
+    live.add_argument("--once", action="store_true", help="Read and send one status, then exit")
+    live.set_defaults(func=command_live_status, hold_ms=LIVE_HOLD_MS)
+
+    stdin_json = subparsers.add_parser("stdin-json", help="Read AI prediction JSON lines (or LIVE_STATUS= lines) from stdin")
     add_common_options(stdin_json)
+    add_room_options(stdin_json)
     stdin_json.add_argument("--stop-on-error", action="store_true")
     stdin_json.set_defaults(func=command_stdin_json)
 

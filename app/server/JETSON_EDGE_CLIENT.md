@@ -42,7 +42,7 @@ http://127.0.0.1:8000/admin
 ```text
 Jetson IP: 192.168.55.1
 노트북 USB-C IP: 192.168.55.100
-SSH 계정 예시: junwon@192.168.55.1
+SSH 계정 예시: <사용자>@192.168.55.1
 ```
 
 노트북 서버는 실제 센서값만 받도록 아래처럼 실행하는 것을 권장합니다.
@@ -57,14 +57,14 @@ $env:REAL_SENSOR_ONLY="true"
 Jetson에서 서버 연결 확인:
 
 ```bash
-python3 ~/jetson_edge_client.py --server-url http://192.168.55.100:8000 health
+python3 ~/jetson_edge_client.py health --server-url http://192.168.55.100:8000
 ```
 
 Jetson에서 단일 이벤트 전송 확인:
 
 ```bash
-python3 ~/jetson_edge_client.py --server-url http://192.168.55.100:8000 once --event danger
-python3 ~/jetson_edge_client.py --server-url http://192.168.55.100:8000 once --event normal
+python3 ~/jetson_edge_client.py once --event danger --server-url http://192.168.55.100:8000
+python3 ~/jetson_edge_client.py once --event normal --server-url http://192.168.55.100:8000
 ```
 
 Jetson AI 추론 실행 전 CUDA 라이브러리 경로가 필요한 경우:
@@ -153,21 +153,45 @@ python3 jetson_edge_client.py once \
   --event still
 ```
 
-## AI 모델 출력과 연결
+## 실시간 AI 추론 결과 연결 (edge_ai → 서버)
 
-나중에 AI 모델이 아래처럼 JSON을 출력하게 만들면:
+`edge_ai/jetson/run_live.sh`가 실행 중이면 추론 결과가 `edge_ai/runtime/latest_status.json`에 계속 갱신됩니다(형식: `hanium.ruview.live-status.v2`). `live-status` 모드가 이 결과를 읽어 서버의 `/sensor/update` 형식으로 바꿔 보냅니다.
+
+```bash
+# Jetson 안에서: 결과 파일을 1초마다 읽어 전송
+python3 jetson_edge_client.py live-status \
+  --status-file ~/26_HS022/edge_ai/runtime/latest_status.json \
+  --server-url http://192.168.55.100:8000
+
+# 노트북에서: Jetson의 상태 API(status_api.py, 기본 :8080)를 읽어 전송
+python3 jetson_edge_client.py live-status \
+  --status-url http://192.168.55.1:8080/status \
+  --server-url http://127.0.0.1:8000
+
+# 파이프로 바로 연결 (run_live.sh 로그 중 LIVE_STATUS= 줄만 골라 전송)
+./edge_ai/jetson/run_live.sh | python3 jetson_edge_client.py stdin-json --server-url http://192.168.55.100:8000
+```
+
+변환 규칙:
+
+| edge_ai 출력 | 서버로 보내는 값 |
+|---|---|
+| `fall.alarm == true` (상태기계 CONFIRMED) | `status: danger`, `pose: lying` |
+| 그 외 | `status: normal`, `activity`에 따라 `pose`(walking / sitting / lying / standing) |
+| `health.respiratory.breathing_rate_bpm` (신뢰 가능할 때만 값 존재) | `breathingRate`, `breathingConfidence` — 값이 없으면 보내지 않음 |
+| 위치 | 모델은 방 단위로 판단하고 좌표를 추정하지 않으므로, 센서가 설치된 방의 도면 좌표(`--room-x`, `--room-y`)를 사용 |
+
+## 그 밖의 AI 출력 연결 (단순 JSON)
+
+다른 추론 스크립트가 아래처럼 JSON을 출력하면 `stdin-json`으로도 연결할 수 있습니다.
 
 ```json
 {"label":"fall","confidence":0.92,"x":0.36,"y":0.45}
 ```
 
-아래처럼 연결할 수 있습니다.
-
 ```bash
 python3 ai_inference.py | python3 jetson_edge_client.py stdin-json --server-url http://172.20.10.2:8000
 ```
-
-`stdin-json` 모드는 한 줄에 JSON 하나씩 읽어서 서버로 전송합니다.
 
 지원 label:
 
@@ -207,4 +231,4 @@ fall, fallen, lying, danger -> danger
 
 ## 발표/개발 설명
 
-> Jetson Orin에는 센서/AI 결과를 서버로 보내는 edge client를 구성했습니다. 현재는 mock 시나리오로 정상, 현관 접근, 장시간 무반응, 낙상 의심과 호흡 리듬 참고값을 서버에 전송할 수 있고, 이후 실제 WiFi CSI 1D-CNN 모델 출력값을 같은 JSON 형식으로 연결하면 앱 화면과 보호자 알림에 반영되는 구조입니다.
+> Jetson Orin에는 센서/AI 결과를 서버로 보내는 edge client를 구성했습니다. `live-status` 모드는 실제 WiFi CSI 추론 결과(낙상 상태기계, 호흡 추정)를 서버로 전달하고, `sequence`·`once` 모드는 센서 없이 발표·테스트할 때 정상, 현관 접근, 장시간 무반응, 낙상 의심 시나리오를 재현합니다.
