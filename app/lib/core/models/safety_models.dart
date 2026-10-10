@@ -134,7 +134,7 @@ class Guardian {
 
     return Guardian(
       id: id,
-      name: cleanText(json['name'], id == 1 ? '김영희 어르신' : '김주환 보호자'),
+      name: cleanText(json['name'], id == 1 ? '김영희 어르신' : '홍길동 보호자'),
       phone: cleanText(json['phone'], id == 1 ? '010-0000-0000' : '010-1234-5678'),
       role: cleanText(json['role'], id == 1 ? '피보호자' : '1순위 보호자'),
     );
@@ -172,7 +172,7 @@ class EmergencyInfo {
     accessNote: '공동현관 호출 후 보호자에게 연락해 주세요.',
     doorPassword: '',
     medicalNote: '고혈압 약 복용 중. 낙상 의심 시 무리하게 일으키지 말아 주세요.',
-    hospital: '가까운 응급실: 아주대학교병원',
+    hospital: '가까운 응급실: ○○병원 응급실',
   );
 
   final String address;
@@ -346,7 +346,7 @@ class SafetySnapshot {
       alerts: [AlertEvent.fromStatus(SafetyStatus.normal, room: RoomResolver.living)],
       guardians: const [
         Guardian(id: 1, name: '김영희 어르신', phone: '010-0000-0000', role: '피보호자'),
-        Guardian(id: 2, name: '김주환 보호자', phone: '010-1234-5678', role: '1순위 보호자'),
+        Guardian(id: 2, name: '홍길동 보호자', phone: '010-1234-5678', role: '1순위 보호자'),
       ],
       emergencyInfo: EmergencyInfo.defaultInfo,
       settings: const {
@@ -577,8 +577,8 @@ class SafetySnapshot {
 
   String get breathingStatusLabel {
     if (status == SafetyStatus.danger) return '호흡 확인 필요';
-    if (breathingRate < 12) return '평소보다 느림';
-    if (breathingRate > 22) return '평소보다 빠름';
+    if (breathingRate < 12) return '일반 범위보다 느림';
+    if (breathingRate > 22) return '일반 범위보다 빠름';
     if (breathingConfidence < 0.55) return '신호 확인 중';
     return '안정적인 리듬';
   }
@@ -588,10 +588,10 @@ class SafetySnapshot {
       return '움직임 변화가 커서 호흡 리듬도 함께 확인하는 중이에요.';
     }
     if (breathingRate < 12) {
-      return '호흡이 평소보다 느리게 보일 수 있어요. 몸 상태를 천천히 확인해 주세요.';
+      return '호흡이 일반적인 범위보다 느리게 보일 수 있어요. 몸 상태를 천천히 확인해 주세요.';
     }
     if (breathingRate > 22) {
-      return '호흡이 평소보다 빠르게 보일 수 있어요. 잠시 앉아서 쉬어 주세요.';
+      return '호흡이 일반적인 범위보다 빠르게 보일 수 있어요. 잠시 앉아서 쉬어 주세요.';
     }
     if (breathingConfidence < 0.55) {
       return '신호가 약해 호흡 리듬을 다시 확인하고 있어요.';
@@ -607,7 +607,7 @@ class SafetySnapshot {
   }
 
   String get breathingSourceLabel {
-    return breathingEstimated ? 'CSI 기반 시연 추정' : 'CSI 호흡 신호 수신';
+    return breathingEstimated ? '시연용 예시값 (측정 대기)' : 'CSI 호흡 신호 수신';
   }
 
   String get dataSourceLabel {

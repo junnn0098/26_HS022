@@ -102,8 +102,8 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -Content
 python demo_sensor_client.py
 ```
 
-Python 명령이 없다면 Codex 번들 Python을 사용할 수 있습니다.
+Python 3가 설치된 환경에서 실행합니다.
 
 ```powershell
-C:\Users\juhwan\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe demo_sensor_client.py
+python demo_sensor_client.py
 ```

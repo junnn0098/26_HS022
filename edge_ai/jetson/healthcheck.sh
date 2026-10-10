@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-app_dir="${RUVIEW_APP_DIR:-/home/junwon/hanium_ruview_fall_v2}"
+app_dir="${RUVIEW_APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 echo "SERVICE_STATUS"
 systemctl is-active hanium-ruview-inference.service hanium-ruview-api.service
 echo "UDP_5005"

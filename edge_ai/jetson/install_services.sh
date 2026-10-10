@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-app_dir="${1:-/home/junwon/hanium_ruview_fall_v2}"
+app_dir="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 checkpoint="${2:-$app_dir/models/production/best_model.pt}"
 cough_checkpoint="${3:-$app_dir/models/production/best_cough_model.pt}"
 app_user="$(id -un)"

@@ -1,7 +1,6 @@
 @echo off
 setlocal
-set NODE=C:\Users\juhwan\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe
-if not exist "%NODE%" set NODE=node
+if "%NODE%"=="" set NODE=node
 if "%PORT%"=="" set PORT=8000
 cd /d "%~dp0"
 echo.

@@ -7,17 +7,17 @@ WiFi CSI 기반 어르신 안전 모니터링 앱의 개발용 FastAPI 서버입
 FastAPI 패키지를 설치할 수 있으면 아래 방식으로 실행합니다.
 
 ```powershell
-cd C:\Users\juhwan\Documents\Codex\2026-06-23\new-chat\Hanium_fastApi
+cd <작업폴더>\app\server
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-현재 Codex 환경처럼 pip 설치가 막힌 경우에는 외부 패키지 없는 개발용 서버를 사용합니다.
+pip 설치가 어려운 환경에서는 외부 패키지 없는 개발용 서버를 사용합니다.
 
 ```powershell
-C:\Users\juhwan\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe dev_mock_server.py
+python dev_mock_server.py
 ```
 
 Node.js 개발용 서버도 제공합니다. Python/FastAPI 설치 없이 실행할 수 있습니다.

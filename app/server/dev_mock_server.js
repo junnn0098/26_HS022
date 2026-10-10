@@ -19,7 +19,7 @@ const defaultState = {
   deviceTokens: [],
   guardians: [
     { id: 1, name: "김영희 어르신", phone: "010-0000-0000", role: "보호 대상" },
-    { id: 2, name: "김주환 보호자", phone: "010-1234-5678", role: "1순위 보호자" },
+    { id: 2, name: "홍길동 보호자", phone: "010-1234-5678", role: "1순위 보호자" },
   ],
   settings: {
     fallDetection: true,
@@ -33,11 +33,11 @@ const defaultState = {
     miniatureSize: "medium",
   },
   emergencyInfo: {
-    address: "경기도 수원시 ○○구 ○○로 123, 101동 1001호",
+    address: "○○시 ○○구 ○○로 123, 101동 1001호",
     accessNote: "공동현관 호출 후 보호자에게 연락해 주세요.",
     doorPassword: "",
     medicalNote: "고혈압 약 복용 중. 낙상 의심 시 무리하게 일으키지 말아 주세요.",
-    hospital: "가까운 응급실: 아주대학교병원",
+    hospital: "가까운 응급실: ○○병원 응급실",
   },
   alerts: [
     {

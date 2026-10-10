@@ -7,7 +7,7 @@
 PowerShell에서 실행:
 
 ```powershell
-cd C:\Users\juhwan\Documents\Codex\2026-06-23\new-chat\Hanium_fastApi
+cd <작업폴더>\app\server
 .\run_mock_server_node.cmd
 ```
 
@@ -32,7 +32,7 @@ Invoke-RestMethod http://127.0.0.1:8000/location/latest
 PowerShell에서 실행:
 
 ```powershell
-cd C:\Users\juhwan\Documents\Codex\2026-06-23\new-chat\Hanium_app
+cd <작업폴더>\app
 .\run_emulator_local.cmd
 ```
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-app_dir="${RUVIEW_APP_DIR:-/home/junwon/hanium_ruview_fall_v2}"
+app_dir="${RUVIEW_APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 checkpoint="${RUVIEW_CHECKPOINT:-$app_dir/models/production/best_model.pt}"
 cough_checkpoint="${RUVIEW_COUGH_CHECKPOINT:-$app_dir/models/production/best_cough_model.pt}"
 nodes="${RUVIEW_NODES:-1,2,3,4}"

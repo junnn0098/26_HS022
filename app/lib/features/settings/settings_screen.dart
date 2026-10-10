@@ -293,7 +293,7 @@ class _CareTargetCard extends StatelessWidget {
           const Divider(height: 26, color: AppColors.border),
           _InfoRow(
             icon: Icons.admin_panel_settings_rounded,
-            title: _safeText(guardian?.name, '김주환 보호자'),
+            title: _safeText(guardian?.name, '홍길동 보호자'),
             subtitle: '${_safeText(guardian?.role, '1순위 보호자')} · ${_safeText(guardian?.phone, '010-1234-5678')}',
             color: AppColors.success,
           ),
@@ -338,7 +338,7 @@ class _EmergencyInfoCard extends StatelessWidget {
           _InfoRow(
             icon: Icons.local_hospital_rounded,
             title: '가까운 병원',
-            subtitle: _safeText(info.hospital, '가까운 응급실: 아주대학교병원'),
+            subtitle: _safeText(info.hospital, '가까운 응급실: ○○병원 응급실'),
             color: AppColors.success,
           ),
         ],
