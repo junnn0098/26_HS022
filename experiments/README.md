@@ -4,6 +4,8 @@
 
 **[실험 결과 보고서](RESULTS.md)** · [원시 결과 폴더](results/2026-10-18) · [향후 실환경 평가 절차](../docs/validation/EVALUATION_PROTOCOL.md)
 
+기존 공개 녹화 목록을 분석한 자료는 [수집 기록 설명서](../docs/data_collection/DATASET_CARD.md)에 따로 정리했습니다. `audit_collection.py`는 목록의 집계값과 분포 그래프만 생성하며, 아래 합성 신호 실험과 분석 단위가 다릅니다.
+
 ## 포함한 실험
 
 | 실험 | 입력 | 결과 파일 | 확인하는 내용 |

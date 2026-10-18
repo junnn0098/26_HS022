@@ -6,6 +6,7 @@
 |---|---|---|
 | 실제로 실행한 실험 | [실험 결과 보고서](../experiments/RESULTS.md) | 낙상 10개 시나리오, 호흡 60회, 패킷 누락 36회, 노드 마스크, 서버 관측 |
 | 실험 재현 | [실험 안내](../experiments/README.md) | Python 코드, 입력 시나리오, CSV·JSON, 그래프 3개, 환경·파일 해시 |
+| 공개 수집 기록의 구성 | [데이터 설명서](data_collection/DATASET_CARD.md) | 동작 분포·메타데이터 집계, 평가 전 보완 사항, 재현 코드 |
 | 센서에서 앱까지의 형식 | [데이터 연결 규격](architecture/DATA_CONTRACTS.md) | 패킷 바이트, 특징 배열, 상태 JSON, 서버 입력 |
 | 설계서와 구현의 관계 | [설계·구현 대조표](IMPLEMENTATION_STATUS.md) | 요구사항별 코드 근거와 보완 항목 |
 | 직접 실행·시연 | [실행 안내](RUNBOOK.md) | 센서 없는 시연, 모델 연결, FCM·평가 실행 |
