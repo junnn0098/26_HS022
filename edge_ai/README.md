@@ -1,6 +1,6 @@
 # edge_ai — Jetson 엣지 AI 파이프라인
 
-ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)을 받아, 실시간으로 낙상·행동·인원·호흡을 추론하는 Jetson Orin Nano용 코드입니다. (구 `Hanium_jetson` 저장소)
+호환 학습 가중치가 설치된 환경에서 ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)을 받아, 실시간으로 낙상·행동·인원·호흡을 추론하는 Jetson Orin Nano용 코드입니다. (구 `Hanium_jetson` 저장소)
 
 | 파일 | 역할 |
 |---|---|
@@ -16,6 +16,8 @@ ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)을 
 | `jetson/` | 실행 스크립트와 systemd 서비스 템플릿 |
 | `config/default_config.json` | 특징·모델·상태기계·건강 모니터링 설정값 |
 
+[전체 실행 순서](../docs/RUNBOOK.md) · [설계·구현 대조](../docs/IMPLEMENTATION_STATUS.md)
+
 ## 점검
 
 ```bash
@@ -23,6 +25,8 @@ pip install -r requirements.txt
 python3 -m hanium_fall_v2.selftest        # torch 없이도 파서·특징·상태기계 점검
 python3 -m unittest discover -s tests     # 단위 테스트 (torch가 필요한 테스트는 자동으로 건너뜀)
 ```
+
+이번 점검(2026-10-18, PyTorch 미설치)은 31개 중 25개 통과·6개 건너뜀입니다. 센서와 가중치를 사용한 성능 평가 결과는 아닙니다.
 
 ## 실시간 실행
 
@@ -37,3 +41,5 @@ python3 -m unittest discover -s tests     # 단위 테스트 (torch가 필요한
 추론 결과를 앱 서버로 보내려면 `app/server/jetson_edge_client.py live-status`를 사용합니다([설명](../app/server/JETSON_EDGE_CLIENT.md)).
 
 학습된 체크포인트(`models/`)와 수집 데이터(`captures/`)는 `.gitignore`로 제외되어 있습니다.
+
+`run_live.sh`는 가중치가 없더라도 수신·건강 모니터링 경로를 시작합니다. 이때 `fall.state`는 `model_unavailable`이며 낙상 감지가 실행된 것으로 해석하면 안 됩니다. 실제 낙상 시연 전에 `validate_fall_checkpoint`로 `live_ready`를 확인하세요.
