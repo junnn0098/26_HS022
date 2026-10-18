@@ -46,8 +46,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Local mock server runtime state
+# Local server runtime state
 /server/dev_state.json
+/server/legacy_fastapi_prototype/dev_state.json
 /server/server.out.log
 /server/server.err.log
 /server/**/__pycache__/
