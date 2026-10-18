@@ -83,11 +83,11 @@ Write-Host '==================================================' -ForegroundColor
 Write-Host ' Hanium app all-in-one launcher' -ForegroundColor White
 Write-Host '==================================================' -ForegroundColor DarkGray
 Write-Host ''
-Write-Host '1. Mock server starts in a separate window.'
+Write-Host '1. Local server (server\local_server.js) starts in a separate window.'
 Write-Host '2. Android emulator starts if it is not already running.'
 Write-Host "3. Flutter app runs with SERVER_URL=$serverUrl"
 
-Write-Step '[1/4] Mock server 확인'
+Write-Step '[1/4] 로컬 서버 확인'
 $serverScript = Join-Path $PSScriptRoot 'server\run_mock_server_node.cmd'
 if (-not (Test-Path -LiteralPath $serverScript)) {
   throw "서버 실행 파일을 찾지 못했어요: $serverScript"

@@ -6,9 +6,38 @@ const path = require("path");
 
 const configuredPort = Number(process.env.PORT || 8000);
 const PORT = Number.isFinite(configuredPort) ? configuredPort : 8000;
+// 실제 휴대폰·Jetson 시연을 위해 기본값은 모든 인터페이스(0.0.0.0). 로컬 전용이면 HOST=127.0.0.1
+const HOST = String(process.env.HOST || "").trim() || "0.0.0.0";
 const REAL_SENSOR_ONLY = String(process.env.REAL_SENSOR_ONLY || "")
   .trim()
   .toLowerCase() === "true";
+// 설정된 경우에만 POST 전체와 상태 조회 GET에 `Authorization: Bearer <token>`을 요구한다.
+const API_TOKEN = String(process.env.HANIUM_API_TOKEN || "").trim();
+// 기본은 같은 출처(관리자 페이지)만 허용. 다른 출처는 쉼표로 구분해 지정하고 "*"는 전체 허용.
+const CORS_ORIGINS = String(process.env.HANIUM_CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const PROTECTED_GET_PATHS = new Set([
+  "/state",
+  "/emergency-info",
+  "/guardians",
+  "/alerts",
+  "/settings",
+  "/location/latest",
+]);
+const JSON_BODY_POST_PATHS = new Set([
+  "/device/register",
+  "/care-recipient/safe",
+  "/alerts/delete",
+  "/guardians",
+  "/guardians/update",
+  "/guardians/delete",
+  "/settings",
+  "/emergency-info",
+  "/sensor/update",
+  "/scenario",
+]);
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const STATE_FILE = path.join(__dirname, "dev_state.json");
 const WARNING_NOTIFICATION_CHANNEL_ID = "hanium_warning_alerts_v2";
@@ -35,7 +64,6 @@ const defaultState = {
   emergencyInfo: {
     address: "○○시 ○○구 ○○로 123, 101동 1001호",
     accessNote: "공동현관 호출 후 보호자에게 연락해 주세요.",
-    doorPassword: "",
     medicalNote: "고혈압 약 복용 중. 낙상 의심 시 무리하게 일으키지 말아 주세요.",
     hospital: "가까운 응급실: ○○병원 응급실",
   },
@@ -123,6 +151,9 @@ function loadState() {
     const legacyTokens = Array.isArray(saved.tokens)
       ? saved.tokens
       : defaultState.tokens;
+    // 이전 상태 파일의 출입 비밀번호(doorPassword)는 더 이상 저장·노출하지 않는다.
+    const { doorPassword: _droppedDoorPassword, ...savedEmergencyInfo } =
+      saved.emergencyInfo || {};
     return {
       tokens: legacyTokens,
       deviceTokens: normalizeDeviceTokens(saved.deviceTokens, legacyTokens),
@@ -132,7 +163,7 @@ function loadState() {
       settings: { ...defaultState.settings, ...(saved.settings || {}) },
       emergencyInfo: {
         ...defaultState.emergencyInfo,
-        ...(saved.emergencyInfo || {}),
+        ...savedEmergencyInfo,
       },
       alerts: Array.isArray(saved.alerts) ? saved.alerts : defaultState.alerts,
     };
@@ -294,7 +325,6 @@ function fcmConfigStatus() {
       : credentialPath
         ? "file"
         : "missing",
-    credentialPath: credentialPath || null,
     credentialPathExists: credentialPath ? fs.existsSync(credentialPath) : null,
   };
 }
@@ -539,7 +569,9 @@ function normalizeStatus(status) {
   if (["danger", "fall", "fallen", "lying"].includes(raw)) return "danger";
   if (["out", "exit", "intrusion", "entrance"].includes(raw)) return "out";
   if (["still", "inactive", "sitting", "no_motion"].includes(raw)) return "still";
-  return "normal";
+  if (raw === "normal") return "normal";
+  // 누락·판단 불가(model_unavailable)·인식하지 못한 상태는 정상으로 바꾸지 않는다.
+  return "unknown";
 }
 
 function normalizeRoom(room, x, y) {
@@ -569,6 +601,8 @@ function sensorPayloadWarnings(input = {}) {
     "inactive",
     "sitting",
     "no_motion",
+    "unknown",
+    "model_unavailable",
   ];
 
   if (!Number.isFinite(x)) warnings.push("x is missing or invalid; fallback coordinate was used.");
@@ -578,9 +612,9 @@ function sensorPayloadWarnings(input = {}) {
   else if (y < 0 || y > 1) warnings.push("y was outside 0.0~1.0 and was clamped.");
 
   if (!rawStatus) {
-    warnings.push("status is missing; 'normal' was used.");
+    warnings.push("status is missing; the previous status (or 'unknown') was used.");
   } else if (!acceptedStatus.includes(rawStatus)) {
-    warnings.push(`status '${input.status}' is not recognized and was normalized to 'normal'.`);
+    warnings.push(`status '${input.status}' is not recognized and was normalized to 'unknown'.`);
   }
 
   if (input.confidence !== undefined) {
@@ -590,7 +624,7 @@ function sensorPayloadWarnings(input = {}) {
     }
   }
 
-  if (!input.source) warnings.push("source is missing; 'sensor' was used.");
+  if (!input.source) warnings.push("source is missing; 'unknown' was used.");
   return warnings;
 }
 
@@ -602,24 +636,31 @@ function normalizeLocation(input = {}) {
   const pose = input.pose || poseFromStatus(status);
   const confidence = normalizeNumber(
     input.confidence,
-    latestLocation?.confidence ?? 0.86,
+    // 판단 불가 상태에 이전 신뢰도를 이어 붙이지 않고, 판단 불가의 신뢰도 0을 다음 상태에 물려주지도 않는다.
+    status === "unknown"
+      ? 0
+      : latestLocation && latestLocation.status !== "unknown"
+        ? latestLocation.confidence ?? 0.86
+        : 0.86,
     0,
     1,
   );
+  // 호흡값이 없으면 예시값으로 채우지 않고 null로 전달한다(앱은 '측정 대기'로 표시).
   const rawBreathingRate = input.breathingRate ?? input.respirationRate ?? input.breathRate;
-  const breathingEstimated = rawBreathingRate === undefined || rawBreathingRate === null;
-  const breathingRate = normalizeNumber(
-    rawBreathingRate,
-    breathingRateFromStatus(status),
-    6,
-    36,
-  );
-  const breathingConfidence = normalizeNumber(
-    input.breathingConfidence ?? input.respirationConfidence,
-    breathingEstimated ? 0.66 : 0.84,
-    0,
-    1,
-  );
+  const breathingRate =
+    rawBreathingRate === undefined || rawBreathingRate === null || rawBreathingRate === ""
+      ? null
+      : normalizeNumber(rawBreathingRate, null, 6, 36);
+  const rawBreathingConfidence = input.breathingConfidence ?? input.respirationConfidence;
+  const breathingConfidence =
+    breathingRate === null ||
+    rawBreathingConfidence === undefined ||
+    rawBreathingConfidence === null ||
+    rawBreathingConfidence === ""
+      ? null
+      : normalizeNumber(rawBreathingConfidence, null, 0, 1);
+  // 서버는 호흡값을 보충하지 않는다. 모의 이동 상태를 이어받은 경우처럼 입력이 추정값이라고 표시할 때만 true.
+  const breathingEstimated = breathingRate !== null && input.breathingEstimated === true;
 
   return {
     x: Number(x.toFixed(3)),
@@ -628,22 +669,23 @@ function normalizeLocation(input = {}) {
     room,
     pose,
     confidence: Number(confidence.toFixed(2)),
-    breathingRate: Number(breathingRate.toFixed(1)),
-    breathingConfidence: Number(breathingConfidence.toFixed(2)),
+    breathingRate: breathingRate === null ? null : Number(breathingRate.toFixed(1)),
+    breathingConfidence:
+      breathingConfidence === null ? null : Number(breathingConfidence.toFixed(2)),
     breathingEstimated,
-    source: input.source || "sensor",
+    source: input.source || "unknown",
     timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }),
   };
 }
 
 function ensureLatestLocation() {
   if (!latestLocation) {
+    // 아직 받은 입력이 없으므로 'normal'이 아니라 'unknown'(앱: 확인 필요)으로 시작한다.
+    // 모의 이동 모드에서는 다음 WebSocket 틱부터 모의 이동이 상태를 정한다.
     latestLocation = normalizeLocation({
       x: 0.34,
       y: 0.45,
-      status: "normal",
-      pose: "standing",
-      confidence: 0.86,
+      status: "unknown",
       source: "boot",
     });
   }
@@ -726,7 +768,8 @@ function nowLabel() {
 }
 
 function addAlertFromLocation(location) {
-  if (location.status === "normal") return;
+  // 'unknown'(판단 불가)은 위험 알림으로 만들지 않고 상태로만 전달한다.
+  if (location.status === "normal" || location.status === "unknown") return;
   const existing = alerts[0];
   const sharingEnabled = isLocationSharingEnabled();
   const alertRoom = sharingEnabled ? location.room : "위치 비공개";
@@ -781,20 +824,25 @@ function resetDemoState() {
   tokens = currentTokens;
   deviceTokens = currentDeviceTokens;
   forcedScenario = null;
+  // 초기화 직후에는 입력이 없으므로 'unknown'(앱: 확인 필요)으로 둔다.
   latestLocation = normalizeLocation({
     x: 0.34,
     y: 0.45,
-    status: "normal",
+    status: "unknown",
     room: "거실",
-    pose: "standing",
-    confidence: 0.86,
     source: "reset",
     holdMs: 60000,
   });
   manualSensorUntil = Date.now() + 60000;
   saveState();
   broadcastLocation(latestLocation);
-  return { guardians, settings, emergencyInfo, alerts, location: latestLocation };
+  return {
+    guardians,
+    settings,
+    emergencyInfo,
+    alerts,
+    location: publicLocation(latestLocation),
+  };
 }
 
 function updateGuardian(body) {
@@ -826,7 +874,6 @@ function updateEmergencyInfo(body) {
     ...emergencyInfo,
     address: body.address ?? emergencyInfo.address,
     accessNote: body.accessNote ?? emergencyInfo.accessNote,
-    doorPassword: body.doorPassword ?? emergencyInfo.doorPassword,
     medicalNote: body.medicalNote ?? emergencyInfo.medicalNote,
     hospital: body.hospital ?? emergencyInfo.hospital,
   };
@@ -846,13 +893,36 @@ function readJsonBody(req, callback) {
   });
 }
 
+function isAuthorized(req) {
+  if (!API_TOKEN) return true;
+  const given = Buffer.from(String(req.headers.authorization || ""), "utf8");
+  const expected = Buffer.from(`Bearer ${API_TOKEN}`, "utf8");
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+}
+
+function isJsonRequest(req) {
+  const type = String(req.headers["content-type"] || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  return type === "application/json";
+}
+
+// 같은 출처(관리자 페이지)는 CORS 헤더가 필요 없다. HANIUM_CORS_ORIGIN에 지정한 출처만 허용한다.
+function applyCors(req, res) {
+  const origin = String(req.headers.origin || "").replace(/\/+$/, "");
+  if (!origin || !CORS_ORIGINS.length) return;
+  if (!CORS_ORIGINS.includes("*") && !CORS_ORIGINS.includes(origin)) return;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 function sendJson(res, code, body) {
   const payload = JSON.stringify(body);
   res.writeHead(code, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "*",
-    "Access-Control-Allow-Headers": "*",
     "Content-Length": Buffer.byteLength(payload),
   });
   res.end(payload);
@@ -861,7 +931,6 @@ function sendJson(res, code, body) {
 function sendHtml(res, body) {
   res.writeHead(200, {
     "Content-Type": "text/html; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
   });
   res.end(body);
 }
@@ -885,16 +954,20 @@ function sendWsText(socket, obj) {
   socket.write(Buffer.concat([header, payload]));
 }
 
+// WebSocket으로 나가는 모든 위치는 REST와 같은 publicLocation() 필터(위치 공유 OFF)를 거친다.
+function sendLocationWs(socket, location) {
+  sendWsText(socket, publicLocation(location));
+}
+
 function broadcastLocation(location) {
   addAlertFromLocation(location);
-  const visibleLocation = publicLocation(location);
   for (const socket of wsClients) {
     if (socket.destroyed) {
       wsClients.delete(socket);
       continue;
     }
     try {
-      sendWsText(socket, visibleLocation);
+      sendLocationWs(socket, location);
     } catch (_) {
       wsClients.delete(socket);
       socket.destroy();
@@ -1180,7 +1253,7 @@ function adminHtml() {
     <aside class="controls">
       <section>
         <h2>발표 리모컨</h2>
-        <p class="status-banner" id="demoMessage">1번 시연 시작을 누른 뒤, 앱의 초록색 서버 연결 표시를 확인하세요.</p>
+        <p class="status-banner" id="demoMessage">1번 시연 시작을 누른 뒤, 앱 설정의 '앱 연결 상태'에서 서버 연결이 '준비됨'인지 확인하세요.</p>
         <div class="demo-steps" id="demoSteps"></div>
         <div class="quick-actions">
           <button class="primary" onclick="demoStart()">1. 시연 시작</button>
@@ -1213,6 +1286,7 @@ function adminHtml() {
           <option value="danger">낙상 의심</option>
           <option value="out">현관 접근</option>
           <option value="still">장시간 무반응</option>
+          <option value="unknown">판단 불가</option>
         </select>
         <button class="primary" onclick="sendManual()">위치 전송</button>
         <button onclick="resetSensor()">자동 mock 위치로 복귀</button>
@@ -1238,10 +1312,15 @@ function adminHtml() {
   <script>
     const person = document.getElementById("person");
     const label = document.getElementById("personLabel");
-    const statusColors = { normal: "#28be82", danger: "#ff5b73", out: "#f4a62a", still: "#f4a62a" };
-    const statusLabels = { normal: "정상", danger: "낙상 의심", out: "현관 접근", still: "장시간 무반응" };
+    const statusColors = { normal: "#28be82", danger: "#ff5b73", out: "#f4a62a", still: "#f4a62a", unknown: "#7a8397" };
+    const statusLabels = { normal: "정상", danger: "낙상 의심", out: "현관 접근", still: "장시간 무반응", unknown: "판단 불가" };
+    let apiToken = "";
+    try {
+      apiToken = sessionStorage.getItem("haniumApiToken") || "";
+    } catch (_) {}
+    let tokenPromptDeclined = false;
     const demoSteps = [
-      ["시연 시작", "서버와 앱 연결을 초기화하고 정상 상태로 맞춥니다."],
+      ["시연 시작", "서버와 앱 연결을 초기화합니다. 입력 전이므로 앱은 확인 필요 상태입니다."],
       ["평소 상태", "거실에서 평소와 비슷한 움직임이 감지되는 장면입니다."],
       ["현관 접근", "현관 쪽 이동을 외출 가능성으로 보여줍니다."],
       ["장시간 무반응", "침실-1에서 오랫동안 움직임이 적은 상태를 보여줍니다."],
@@ -1328,14 +1407,40 @@ function adminHtml() {
       document.getElementById("statusInput").value = location.status || "normal";
     }
 
+    // 서버에 HANIUM_API_TOKEN이 설정된 경우에만 401이 오며, 이때 한 번 토큰을 물어 이 탭에만 보관한다.
+    async function apiFetch(path, options = {}) {
+      const send = () => fetch(path, {
+        cache: "no-store",
+        ...options,
+        headers: { ...(options.headers || {}), ...(apiToken ? { Authorization: "Bearer " + apiToken } : {}) },
+      });
+      const sentToken = apiToken;
+      const response = await send();
+      if (response.status !== 401) return response;
+      if (apiToken !== sentToken) return send();
+      if (tokenPromptDeclined) return response;
+      const entered = (window.prompt("서버에 API 토큰(HANIUM_API_TOKEN)이 설정되어 있습니다. 토큰을 입력하세요.") || "").trim();
+      if (!entered) {
+        tokenPromptDeclined = true;
+        return response;
+      }
+      apiToken = entered;
+      try {
+        sessionStorage.setItem("haniumApiToken", apiToken);
+      } catch (_) {}
+      return send();
+    }
+
     async function refreshState() {
       try {
         const [health, state, latest] = await Promise.all([
           fetch("/health", { cache: "no-store" }).then(r => r.json()),
-          fetch("/state", { cache: "no-store" }).then(r => r.json()),
-          fetch("/location/latest", { cache: "no-store" }).then(r => r.json()),
+          apiFetch("/state").then(r => r.json()),
+          apiFetch("/location/latest").then(r => r.json()),
         ]);
-        document.getElementById("serverStatus").textContent = health.ok ? "서버 연결됨" : "확인 필요";
+        document.getElementById("serverStatus").textContent = state.error === "unauthorized"
+          ? "API 토큰 필요"
+          : health.ok ? "서버 연결됨" : "확인 필요";
         renderAlerts(state.alerts || []);
         if (latest.location) updateLocation(latest.location);
       } catch (error) {
@@ -1373,9 +1478,8 @@ function adminHtml() {
     }
 
     async function postJson(path, body) {
-      return fetch(path, {
+      return apiFetch(path, {
         method: "POST",
-        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }).then(r => r.json());
@@ -1423,7 +1527,7 @@ function adminHtml() {
 
     async function resetDemo() {
       await postJson("/demo/reset", {});
-      setDemoStep(0, "시연 상태를 초기화했어요. 앱에서 거실/정상 상태와 초록색 서버 연결을 확인하세요.");
+      setDemoStep(0, "시연 상태를 초기화했어요. 앱에서 확인 필요(입력 대기) 상태와 설정의 서버 연결 '준비됨'을 확인하세요.");
       await refreshState();
     }
 
@@ -1444,7 +1548,7 @@ function adminHtml() {
         y: .45,
         room: "거실",
         step: 1,
-        message: "평소 상태: 거실에서 일반적인 움직임이 감지됩니다. 앱 홈 화면의 '이상 징후 없음'을 확인하세요.",
+        message: "평소 상태: 거실에서 일반적인 움직임이 감지됩니다. 앱 홈 화면의 '정상' 상태를 확인하세요.",
       });
     }
 
@@ -1515,7 +1619,7 @@ function adminHtml() {
     async function copyDemoScript() {
       const text = [
         "이 앱은 카메라 없이 WiFi CSI 기반 움직임 정보를 받아 보호자에게 꼭 필요한 안전 상태만 보여줍니다.",
-        "먼저 평소 상태에서는 거실에서 일반적인 움직임이 감지되어 이상 징후가 없다고 표시됩니다.",
+        "먼저 평소 상태에서는 거실에서 일반적인 움직임이 감지되어 앱에 정상으로 표시됩니다.",
         "현관 접근이나 장시간 무반응처럼 보호자가 확인해야 할 상황이 생기면 앱에 주의 알림이 생성됩니다.",
         "낙상 의심 상황에서는 위치와 시간, 응급 대응 절차를 바로 확인할 수 있고 보호자 연락/119 신고 정보까지 이어집니다.",
       ].join("\\n");
@@ -1547,7 +1651,22 @@ function adminHtml() {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
 
+  applyCors(req, res);
   if (req.method === "OPTIONS") return sendJson(res, 204, {});
+  const needsToken =
+    req.method === "POST" ||
+    (req.method === "GET" && PROTECTED_GET_PATHS.has(url.pathname));
+  if (needsToken && !isAuthorized(req)) {
+    res.setHeader("WWW-Authenticate", "Bearer");
+    return sendJson(res, 401, { error: "unauthorized" });
+  }
+  if (
+    req.method === "POST" &&
+    JSON_BODY_POST_PATHS.has(url.pathname) &&
+    !isJsonRequest(req)
+  ) {
+    return sendJson(res, 415, { error: "Content-Type must be application/json" });
+  }
   if (req.method === "GET" && url.pathname === "/") {
     return sendJson(res, 200, {
       project: "Hanium CSI Safety System",
@@ -1564,6 +1683,8 @@ const server = http.createServer((req, res) => {
       ok: true,
       port: PORT,
       realSensorOnly: REAL_SENSOR_ONLY,
+      mockMotion: !REAL_SENSOR_ONLY,
+      authRequired: Boolean(API_TOKEN),
       wsClients: wsClients.size,
       hasLocation: Boolean(latestLocation),
       push: fcmConfigStatus(),
@@ -1601,7 +1722,7 @@ const server = http.createServer((req, res) => {
       requiredFields: {
         x: "number, 0.0~1.0",
         y: "number, 0.0~1.0",
-        status: "normal | out | still | danger | fall | fallen | no_motion",
+        status: "normal | out | still | danger | fall | fallen | no_motion | unknown | model_unavailable",
       },
       optionalFields: {
         room: "거실 | 주방 | 침실-1 | 침실-2 | 욕실 | 현관",
@@ -1609,9 +1730,10 @@ const server = http.createServer((req, res) => {
         confidence: "number, 0.0~1.0",
         breathingRate: "number, breaths per minute. alias: respirationRate, breathRate",
         breathingConfidence: "number, 0.0~1.0. alias: respirationConfidence",
-        source: "jetson | esp32 | sensor | admin | mock",
+        source: "jetson_orin (real edge inference) | scripted_demo | admin | esp32 | mock. missing -> unknown",
         holdMs: "number, milliseconds to keep manual value",
       },
+      authorization: API_TOKEN ? "Authorization: Bearer <HANIUM_API_TOKEN>" : "not required",
       example: {
         x: 0.76,
         y: 0.68,
@@ -1621,7 +1743,7 @@ const server = http.createServer((req, res) => {
         confidence: 0.92,
         breathingRate: 24.1,
         breathingConfidence: 0.84,
-        source: "jetson",
+        source: "jetson_orin",
         holdMs: 60000,
       },
     });
@@ -1638,15 +1760,18 @@ const server = http.createServer((req, res) => {
       confidence: 0.92,
       breathingRate: 24.1,
       breathingConfidence: 0.84,
-      source: "jetson",
+      source: "scripted_demo",
       holdMs: 60000,
     };
     const bodyText = JSON.stringify(body).replace(/'/g, "''");
+    // 토큰 값 자체는 응답에 넣지 않고 자리표시자만 보여준다.
+    const psAuth = API_TOKEN ? " -Headers @{ Authorization = 'Bearer <HANIUM_API_TOKEN>' }" : "";
+    const curlAuth = API_TOKEN ? " -H 'Authorization: Bearer <HANIUM_API_TOKEN>'" : "";
     return sendJson(res, 200, {
       powershell:
-        `Invoke-RestMethod -Method Post -Uri '${uri}' -ContentType 'application/json; charset=utf-8' -Body '${bodyText}'`,
+        `Invoke-RestMethod -Method Post -Uri '${uri}' -ContentType 'application/json; charset=utf-8'${psAuth} -Body '${bodyText}'`,
       curl:
-        `curl -X POST '${uri}' -H 'Content-Type: application/json' -d '${JSON.stringify(body)}'`,
+        `curl -X POST '${uri}' -H 'Content-Type: application/json'${curlAuth} -d '${JSON.stringify(body)}'`,
       body,
     });
   }
@@ -1705,12 +1830,16 @@ const server = http.createServer((req, res) => {
         urgent: false,
       }));
 
+      // 위치 공유 OFF이면 보호자 알림·푸시에도 방 이름을 남기지 않는다.
+      const sharingEnabled = isLocationSharingEnabled();
+      const alertRoom = sharingEnabled ? room : "위치 비공개";
+      const safeRoomText = sharingEnabled ? `${room}에서` : "위치 비공개 상태에서";
       const alert = {
         id: Date.now(),
         type: "safe",
         title: "어르신이 괜찮다고 알려왔어요",
-        message: `${room}에서 괜찮다고 표시했어요. 보호자 확인 알림을 정리합니다.`,
-        room,
+        message: `${safeRoomText} 괜찮다고 표시했어요. 보호자 확인 알림을 정리합니다.`,
+        room: alertRoom,
         time: nowLabel(),
         urgent: false,
         resolved: true,
@@ -1721,6 +1850,8 @@ const server = http.createServer((req, res) => {
       latestLocation = normalizeLocation({
         ...current,
         status: "normal",
+        // 판단 불가였던 신뢰도 0은 이어받지 않는다.
+        confidence: current.status === "unknown" ? undefined : current.confidence,
         room,
         pose: "standing",
         source: "care-recipient",
@@ -1734,7 +1865,7 @@ const server = http.createServer((req, res) => {
       sendJson(res, 200, {
         status: push.requested ? "guardian_push_requested" : "stored_only",
         alert,
-        location: latestLocation,
+        location: publicLocation(latestLocation),
         push,
       });
     });
@@ -1856,7 +1987,7 @@ const server = http.createServer((req, res) => {
       sendJson(res, 200, {
         status: "ok",
         scenario: forcedScenario,
-        location: latestLocation,
+        location: publicLocation(latestLocation),
         push: fcmConfigStatus(),
       });
     });
@@ -1886,14 +2017,14 @@ server.on("upgrade", (req, socket) => {
   );
 
   wsClients.add(socket);
-  sendWsText(socket, ensureLatestLocation());
+  sendLocationWs(socket, ensureLatestLocation());
   let tick = 0;
   const timer = setInterval(() => {
     if (socket.destroyed) return clearInterval(timer);
     if (forcedScenario && Date.now() > forcedScenario.until) forcedScenario = null;
     const location = currentLocation(tick++);
     addAlertFromLocation(location);
-    sendWsText(socket, location);
+    sendLocationWs(socket, location);
   }, 1000);
 
   socket.on("close", () => {
@@ -1906,9 +2037,41 @@ server.on("upgrade", (req, socket) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Hanium mock API server running on http://127.0.0.1:${PORT}`);
-  console.log(`Admin page: http://127.0.0.1:${PORT}/admin`);
+server.listen(PORT, HOST, () => {
+  // 특정 주소(예: LAN IP)에만 바인딩하면 127.0.0.1로는 접속되지 않으므로 그 주소를 안내한다.
+  const displayHost = ["0.0.0.0", "::", "localhost"].includes(HOST)
+    ? "127.0.0.1"
+    : HOST.includes(":")
+      ? `[${HOST}]`
+      : HOST;
+  console.log(`Hanium local server running on http://${displayHost}:${PORT} (listening on ${HOST})`);
+  console.log(`Admin page: http://${displayHost}:${PORT}/admin`);
   console.log(`Android emulator app URL: http://10.0.2.2:${PORT}`);
   console.log(`WebSocket endpoint: ws://10.0.2.2:${PORT}/ws/location`);
+  if (REAL_SENSOR_ONLY) {
+    console.log(
+      "Mode: REAL_SENSOR_ONLY=true -> mock motion OFF. Only POST /sensor/update, /scenario and admin input change the state.",
+    );
+  } else {
+    console.log(
+      "Mode: REAL_SENSOR_ONLY is not true -> mock motion ON. Synthetic movement and a mock fall about every 45 s are generated (source=mock). Set REAL_SENSOR_ONLY=true to turn it off.",
+    );
+  }
+  console.log(
+    API_TOKEN
+      ? "API token: required (HANIUM_API_TOKEN is set; send Authorization: Bearer <token>)."
+      : "API token: not required (set HANIUM_API_TOKEN to require a Bearer token).",
+  );
+  console.log(
+    CORS_ORIGINS.length
+      ? `CORS allowed origins: ${CORS_ORIGINS.join(", ")}`
+      : "CORS: same-origin only (set HANIUM_CORS_ORIGIN to allow another origin).",
+  );
+  if (HOST === "0.0.0.0" || HOST === "::") {
+    console.warn(
+      `[warn] HOST=${HOST}: the API is reachable from every device on this network (needed for a real phone or a separate Jetson). ` +
+        `Use only on a trusted demo network, set HOST=127.0.0.1 for local-only use (the Android emulator still reaches it via 10.0.2.2)` +
+        (API_TOKEN ? "." : ", or set HANIUM_API_TOKEN."),
+    );
+  }
 });

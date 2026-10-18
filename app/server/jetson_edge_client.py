@@ -15,9 +15,12 @@ Typical commands:
   python3 jetson_edge_client.py live-status --status-url http://<jetson-ip>:8080/status --server-url http://127.0.0.1:8000
   ./edge_ai/jetson/run_live.sh | python3 jetson_edge_client.py stdin-json --server-url http://192.168.0.15:8000
 
-  # Demo / test helpers
+  # Demo / test helpers (preset values, sent with source=scripted_demo)
   python3 jetson_edge_client.py sequence --server-url http://127.0.0.1:8000
   python3 jetson_edge_client.py once --event danger --server-url http://192.168.0.15:8000
+
+If the server was started with HANIUM_API_TOKEN, set the same environment variable
+here (or pass --server-token) so requests carry `Authorization: Bearer <token>`.
 """
 
 from __future__ import annotations
@@ -34,11 +37,21 @@ from typing import Any
 
 
 DEFAULT_SERVER_URL = os.environ.get("HANIUM_SERVER_URL", "http://127.0.0.1:8000")
+DEFAULT_SERVER_TOKEN = os.environ.get("HANIUM_API_TOKEN", "")
 DEFAULT_HOLD_MS = 60_000
 LIVE_HOLD_MS = 15_000
 LIVE_STATUS_PREFIX = "LIVE_STATUS="
 LIVE_STATUS_SCHEMA_PREFIX = "hanium.ruview.live-status"
 DEFAULT_STATUS_FILE = os.environ.get("RUVIEW_STATUS_FILE", "runtime/latest_status.json")
+DEFAULT_MAX_AGE_SECONDS = 10.0
+
+# Real edge inference results vs. preset/scripted demo input (shown differently in the app).
+LIVE_SOURCE = "jetson_orin"
+SCRIPTED_SOURCE = "scripted_demo"
+
+# fall.state values of edge_ai's FallStateMachine that are a real (non-alarm) judgement.
+# Anything else (model_unavailable, unknown, missing) is forwarded as status=unknown.
+KNOWN_FALL_STATES = {"normal", "fall_candidate", "post_fall_check", "confirmed", "recovered"}
 
 # edge_ai display activities -> app pose
 LIVE_ACTIVITY_TO_POSE = {
@@ -142,13 +155,27 @@ def normalize_server_url(server_url: str) -> str:
     return server_url.rstrip("/")
 
 
-def post_json(server_url: str, path: str, payload: dict[str, Any], timeout: float, retries: int) -> dict[str, Any]:
+def json_headers(token: str = "") -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def post_json(
+    server_url: str,
+    path: str,
+    payload: dict[str, Any],
+    timeout: float,
+    retries: int,
+    token: str = "",
+) -> dict[str, Any]:
     url = f"{normalize_server_url(server_url)}{path}"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=json_headers(token),
         method="POST",
     )
 
@@ -159,6 +186,10 @@ def post_json(server_url: str, path: str, payload: dict[str, Any], timeout: floa
                 text = response.read().decode("utf-8")
                 return json.loads(text) if text else {}
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            if isinstance(exc, urllib.error.HTTPError) and 400 <= exc.code < 500:
+                # Client errors (e.g. 401 missing token, 415) do not get better by retrying.
+                hint = " (set HANIUM_API_TOKEN or --server-token)" if exc.code == 401 else ""
+                raise RuntimeError(f"POST {url} was rejected: HTTP {exc.code}{hint}") from exc
             last_error = exc
             if attempt <= retries:
                 print(f"[warn] request failed, retry {attempt}/{retries}: {exc}", file=sys.stderr)
@@ -187,7 +218,7 @@ def build_payload(
     breathing_rate: float | None = None,
     breathing_confidence: float | None = None,
     room: str | None = None,
-    source: str = "jetson_orin",
+    source: str = SCRIPTED_SOURCE,
     hold_ms: int = DEFAULT_HOLD_MS,
 ) -> dict[str, Any]:
     preset = EVENT_PRESETS.get(event, EVENT_PRESETS["normal"])
@@ -229,19 +260,19 @@ def event_from_label(label: str | None) -> str:
 
 def payload_from_ai_record(record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     label = record.get("label") or record.get("status") or record.get("prediction")
+    known_label = label is not None and str(label).strip().lower() in LABEL_TO_EVENT
     event = event_from_label(str(label) if label is not None else None)
     preset = EVENT_PRESETS[event]
-    return build_payload(
+    breathing_rate = record.get("breathingRate", record.get("respirationRate", record.get("breathRate")))
+    payload = build_payload(
         event,
         x=record.get("x", preset.x),
         y=record.get("y", preset.y),
-        status=record.get("status", preset.status),
+        # A missing or unrecognized label is "unknown", never silently "normal".
+        status=record.get("status", preset.status) if known_label else "unknown",
         pose=record.get("pose", preset.pose),
         confidence=record.get("confidence", record.get("probability", preset.confidence)),
-        breathing_rate=record.get(
-            "breathingRate",
-            record.get("respirationRate", record.get("breathRate", preset.breathing_rate)),
-        ),
+        breathing_rate=breathing_rate,
         breathing_confidence=record.get(
             "breathingConfidence",
             record.get("respirationConfidence", preset.breathing_confidence),
@@ -250,6 +281,11 @@ def payload_from_ai_record(record: dict[str, Any], args: argparse.Namespace) -> 
         source=args.source,
         hold_ms=args.hold_ms,
     )
+    if breathing_rate is None:
+        # Do not fill a missing breathing value with a preset; the app shows it as waiting.
+        payload.pop("breathingRate", None)
+        payload.pop("breathingConfidence", None)
+    return payload
 
 
 def is_live_status(record: dict[str, Any]) -> bool:
@@ -260,13 +296,16 @@ def payload_from_live_status(record: dict[str, Any], args: argparse.Namespace) -
     """Convert edge_ai `hanium.ruview.live-status.v2` output into a /sensor/update payload.
 
     - The fall state machine decides the alarm: only a CONFIRMED fall becomes `danger`.
+    - `model_unavailable`, `unknown` or any unrecognized/missing fall state becomes
+      `unknown`, so "no model / low quality" is never shown as `normal`.
     - The model senses one room and does not estimate coordinates, so the marker is
       placed at the monitored room's floor-plan position given by --room-x/--room-y.
     - Breathing rate is forwarded only when edge_ai reports a reliable estimate;
       otherwise it is omitted instead of being filled with a made-up number.
     """
     fall = record.get("fall") or {}
-    alarm = bool(fall.get("alarm")) or fall.get("state") == "confirmed"
+    fall_state = str(fall.get("state") or "").strip().lower()
+    alarm = bool(fall.get("alarm")) or fall_state == "confirmed"
     activity = str(record.get("activity") or "unknown")
     probabilities = record.get("activity_probabilities") or {}
 
@@ -274,7 +313,7 @@ def payload_from_live_status(record: dict[str, Any], args: argparse.Namespace) -
         status, pose = "danger", "lying"
         confidence = probabilities.get("fall", record.get("activity_confidence"))
     else:
-        status = "normal"
+        status = "normal" if fall_state in KNOWN_FALL_STATES else "unknown"
         pose = LIVE_ACTIVITY_TO_POSE.get(activity, "standing")
         confidence = record.get("activity_confidence")
 
@@ -297,6 +336,35 @@ def payload_from_live_status(record: dict[str, Any], args: argparse.Namespace) -
         if breathing_confidence is not None:
             payload["breathingConfidence"] = round(clamp(float(breathing_confidence)), 2)
     return payload
+
+
+def live_status_age(record: dict[str, Any], now: float | None = None) -> float | None:
+    """Seconds since the record's `unix_time`, or None when it has no usable timestamp."""
+    try:
+        recorded_at = float(record.get("unix_time"))
+    except (TypeError, ValueError):
+        return None
+    return (time.time() if now is None else now) - recorded_at
+
+
+def is_stale_live_status(record: dict[str, Any], max_age: float, now: float | None = None) -> bool:
+    """A record older than `max_age` seconds (or without `unix_time`) is stale. max_age <= 0 disables."""
+    if max_age <= 0:
+        return False
+    age = live_status_age(record, now)
+    return age is None or age > max_age
+
+
+def stale_payload(args: argparse.Namespace) -> dict[str, Any]:
+    """Tell the server the edge result is no longer current instead of holding the last state."""
+    return {
+        "x": round(clamp(float(args.room_x)), 3),
+        "y": round(clamp(float(args.room_y)), 3),
+        "status": "unknown",
+        "pose": "standing",
+        "source": args.source,
+        "holdMs": int(args.hold_ms),
+    }
 
 
 def parse_json_line(line: str) -> dict[str, Any] | None:
@@ -335,6 +403,7 @@ def send_update(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str, 
         payload,
         timeout=args.timeout,
         retries=args.retries,
+        token=args.server_token,
     )
     return result
 
@@ -434,7 +503,11 @@ def command_live_status(args: argparse.Namespace) -> int:
     source = args.status_url or args.status_file
     print(f"[info] server={args.server_url}")
     print(f"[info] mode=live-status, reading {source} every {args.interval}s, Ctrl+C to stop")
+    if args.max_age > 0:
+        print(f"[info] records older than {args.max_age}s are rejected as stale (--max-age)")
     last_seen: Any = object()
+    stale_reported = False
+    exit_code = 0
     try:
         while True:
             try:
@@ -446,8 +519,27 @@ def command_live_status(args: argparse.Namespace) -> int:
             else:
                 if not is_live_status(record):
                     print("[error] not a hanium.ruview.live-status payload", file=sys.stderr)
+                elif is_stale_live_status(record, args.max_age):
+                    # Do not forward an old judgement as current; report "unknown" once instead.
+                    exit_code = 1
+                    if not stale_reported:
+                        age = live_status_age(record)
+                        age_text = "no unix_time" if age is None else f"{age:.1f}s old"
+                        print(
+                            f"[stale] live status rejected ({age_text}, limit {args.max_age}s); "
+                            "sending status=unknown. Is run_live.sh still running? "
+                            "If the Jetson and PC clocks differ, sync them or use --max-age 0.",
+                            file=sys.stderr,
+                        )
+                        try:
+                            send_update(args, stale_payload(args))
+                            stale_reported = True
+                        except Exception as exc:  # noqa: BLE001
+                            print(f"[error] could not send to server: {exc}", file=sys.stderr)
                 elif record.get("unix_time") != last_seen:
                     last_seen = record.get("unix_time")
+                    stale_reported = False
+                    exit_code = 0
                     payload = payload_from_live_status(record, args)
                     try:
                         result = send_update(args, payload)
@@ -455,7 +547,7 @@ def command_live_status(args: argparse.Namespace) -> int:
                     except Exception as exc:  # noqa: BLE001
                         print(f"[error] could not send to server: {exc}", file=sys.stderr)
             if args.once:
-                break
+                return exit_code
             time.sleep(args.interval)
     except KeyboardInterrupt:
         print("\n[info] stopped")
@@ -484,9 +576,14 @@ def command_stdin_json(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_common_options(parser: argparse.ArgumentParser) -> None:
+def add_common_options(parser: argparse.ArgumentParser, source: str = SCRIPTED_SOURCE) -> None:
     parser.add_argument("--server-url", default=DEFAULT_SERVER_URL, help="Local server URL. Default: %(default)s")
-    parser.add_argument("--source", default="jetson_orin", help="Value sent as payload.source")
+    parser.add_argument(
+        "--server-token",
+        default=DEFAULT_SERVER_TOKEN,
+        help="Bearer token for the local server (default: env HANIUM_API_TOKEN)",
+    )
+    parser.add_argument("--source", default=source, help="Value sent as payload.source. Default: %(default)s")
     parser.add_argument("--hold-ms", type=int, default=DEFAULT_HOLD_MS, help="How long the server should hold this state")
     parser.add_argument("--timeout", type=float, default=5.0, help="HTTP timeout seconds")
     parser.add_argument("--retries", type=int, default=2, help="Retry count for failed POST requests")
@@ -544,17 +641,23 @@ def build_parser() -> argparse.ArgumentParser:
         "live-status",
         help="Forward edge_ai live inference results (latest_status.json or status_api /status) to the server",
     )
-    add_common_options(live)
+    add_common_options(live, source=LIVE_SOURCE)
     add_room_options(live)
     live.add_argument("--status-file", default=DEFAULT_STATUS_FILE, help="edge_ai runtime/latest_status.json path")
     live.add_argument("--status-url", help="Read from status_api instead, e.g. http://<jetson-ip>:8080/status")
     live.add_argument("--token", default=os.environ.get("RUVIEW_API_TOKEN", ""), help="status_api bearer token")
     live.add_argument("--interval", type=float, default=1.0, help="Polling interval seconds")
     live.add_argument("--once", action="store_true", help="Read and send one status, then exit")
+    live.add_argument(
+        "--max-age",
+        type=float,
+        default=DEFAULT_MAX_AGE_SECONDS,
+        help="Reject records whose unix_time is older than this many seconds (0 disables). Default: %(default)s",
+    )
     live.set_defaults(func=command_live_status, hold_ms=LIVE_HOLD_MS)
 
     stdin_json = subparsers.add_parser("stdin-json", help="Read AI prediction JSON lines (or LIVE_STATUS= lines) from stdin")
-    add_common_options(stdin_json)
+    add_common_options(stdin_json, source=LIVE_SOURCE)
     add_room_options(stdin_json)
     stdin_json.add_argument("--stop-on-error", action="store_true")
     stdin_json.set_defaults(func=command_stdin_json)
