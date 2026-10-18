@@ -1,54 +1,36 @@
-# Hanium FastAPI Server
+# Hanium 로컬 서버
 
-WiFi CSI 기반 어르신 안전 모니터링 앱의 개발용 FastAPI 서버입니다.
+WiFi CSI 기반 보호자 앱에 상태·알림을 전달하는 Node.js 시연 서버입니다.
 
 ## 실행
 
-FastAPI 패키지를 설치할 수 있으면 아래 방식으로 실행합니다.
+현재 시연 경로는 **Node.js 서버 `dev_mock_server.js`**입니다. 아래 명령은 저장소 루트에서 실행합니다.
 
 ```powershell
-cd <작업폴더>\app\server
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-pip 설치가 어려운 환경에서는 외부 패키지 없는 개발용 서버를 사용합니다.
-
-```powershell
-python dev_mock_server.py
-```
-
-Node.js 개발용 서버도 제공합니다. Python/FastAPI 설치 없이 실행할 수 있습니다.
-
-```powershell
-.\run_mock_server_node.cmd
-```
-
-실제 Jetson/센서 값만 반영하고 mock 위치가 자동으로 움직이지 않게 하려면 서버 실행 전에 아래 환경변수를 지정합니다.
-
-```powershell
+cd app\server
 $env:REAL_SENSOR_ONLY="true"
 .\run_mock_server_node.cmd
 ```
 
-지금 앱 개발 단계에서는 위 Node.js mock 서버를 먼저 추천합니다. 설정값, 보호자, 알림은
-`dev_state.json`에 저장되므로 서버를 껐다 켜도 유지됩니다.
+Linux/macOS:
 
-Android 에뮬레이터에서 PC 서버로 붙을 때는 앱의 서버 주소를 `http://10.0.2.2:8000`으로 사용합니다.
-
-브라우저에서 시연용 관리자 콘솔을 열 수 있습니다.
-
-```powershell
-start http://127.0.0.1:8000/admin
+```bash
+REAL_SENSOR_ONLY=true node app/server/dev_mock_server.js
 ```
+
+서버는 Node.js 기본 모듈을 사용하므로 이 경로에 `npm install`이나 FastAPI 설치는 필요하지 않습니다. `/admin`은 시연 관리자 화면, `/health`는 서버 상태입니다. 전체 순서는 [실행 안내](../../docs/RUNBOOK.md)를 참고하세요.
+
+`REAL_SENSOR_ONLY=true`는 자동 모의 이동을 멈춥니다. 호흡값이 없으면 예시값을 보충하고 입력이 끊기면 마지막 상태를 유지하는 동작은 남아 있습니다. 현재 동작과 개선 항목은 [구현 대조표](../../docs/IMPLEMENTATION_STATUS.md#우선-보완할-구현-항목)에 기록했습니다.
+
+`main.py`·`routers/`·`services/`와 `dev_mock_server.py`는 이전 프로토타입입니다. 현재 Node.js 경로와 API 동작이 같다고 가정하지 않습니다.
+
+설정·보호자·알림은 `dev_state.json`에 저장됩니다. 로그인·서버 API 인증은 구현되지 않았으므로 관리 가능한 시연 네트워크에서 사용합니다.
 
 추가 문서:
 
-- `SENSOR_INTEGRATION.md` : 실제 WiFi CSI/Jetson 센서 연동 요청 형식
-- `DEMO_SCRIPT.md` : 발표 시연 순서와 장애 대응 체크리스트
-- `demo_sensor_client.py` : 센서 입력을 흉내 내는 Python 예제
+- [센서 입력 형식](SENSOR_INTEGRATION.md)
+- [발표 시연 절차](DEMO_SCRIPT.md)
+- [Jetson 결과 연결](JETSON_EDGE_CLIENT.md)
 
 ## 현재 앱과 연결된 개발용 API
 
@@ -57,7 +39,7 @@ start http://127.0.0.1:8000/admin
 - `GET /state` : 보호자, 설정, 알림 전체 상태 확인
 - `GET /location/latest` : 최근 위치/방/자세/위험 상태 조회
 - `POST /sensor/update` : 외부 센서 또는 관리자 콘솔에서 위치/상태 입력
-- `POST /sensor/reset` : 수동 센서 입력 해제 후 mock 위치로 복귀
+- `POST /sensor/reset` : 수동 센서 입력 해제. 자동 모의 이동 여부는 `REAL_SENSOR_ONLY` 설정에 따름
 - `GET /alerts` : 알림 목록 조회
 - `POST /alerts/resolve` : 위험 알림 확인 완료 처리
 - `POST /alerts/delete` : 특정 알림 1개 삭제
@@ -93,7 +75,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/sensor/update -Content
 PowerShell에서 한글 JSON이 깨질 수 있으므로 테스트 명령에서는 `room`을 생략하는 것을 추천합니다.
 서버가 `x`, `y` 좌표를 기준으로 거실/주방/침실-1/침실-2/욕실/현관을 자동 계산합니다.
 
-## 앱이 꺼져 있어도 오는 FCM 알림
+## FCM 설정과 단말 수신 확인
 
 앱은 Firebase Messaging 토큰을 `POST /device/register`로 서버에 등록합니다. 이때 `role` 값으로 `guardian` 또는 `careRecipient`를 함께 보내며, Node.js mock 서버는 역할별 토큰을 저장합니다. 위험 상황, 테스트 알림, 피보호자의 안전 확인 알림은 기본적으로 보호자 토큰을 대상으로 Firebase Cloud Messaging 푸시 알림을 보냅니다.
 
@@ -128,7 +110,7 @@ FCM 설정 상태 확인:
 Invoke-RestMethod http://127.0.0.1:8000/push/status
 ```
 
-정상 전송 준비 상태라면 `push.configured`가 `True`이고 `credentialPathExists`가 `True`로 나와야 합니다.
+설정 확인 시 `push.configured`와 `credentialPathExists`를 확인합니다. 설정·전송 응답 성공만으로 기기 수신이 증명되지는 않으므로 보호자 단말에서 알림 도착까지 확인합니다.
 
 피보호자가 “괜찮다고 알리기”를 누른 상황 테스트:
 

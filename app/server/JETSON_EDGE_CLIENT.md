@@ -25,7 +25,7 @@ server/run_jetson_edge_mock.cmd  # Windows test
 개발 PC 또는 발표 PC에서 서버를 먼저 켭니다.
 
 ```powershell
-cd Hanium_app
+cd app
 .\server\run_mock_server_node.cmd
 ```
 
@@ -35,45 +35,11 @@ cd Hanium_app
 http://127.0.0.1:8000/admin
 ```
 
-## 2026-07-26 기준 실제 Jetson 연동 확인값
+## 현재 권장 연결
 
-노트북과 Jetson을 USB-C 네트워크로 연결했을 때 확인된 기준값입니다.
+현재 추론기는 `latest_status.json`의 낙상 상태기계 결과를 전달하는 `live-status` 모드를 사용합니다. 낙상 확률 하나로 위험/정상을 전환하는 예전 연결 설명과 구분합니다.
 
-```text
-Jetson IP: 192.168.55.1
-노트북 USB-C IP: 192.168.55.100
-SSH 계정 예시: <사용자>@192.168.55.1
-```
-
-노트북 서버는 실제 센서값만 받도록 아래처럼 실행하는 것을 권장합니다.
-
-```powershell
-cd <작업폴더>\Hanium_app\server
-$env:GOOGLE_APPLICATION_CREDENTIALS="<작업폴더>\Hanium_app\server\firebase-service-account.json"
-$env:REAL_SENSOR_ONLY="true"
-.\run_mock_server_node.cmd
-```
-
-Jetson에서 서버 연결 확인:
-
-```bash
-python3 ~/jetson_edge_client.py health --server-url http://192.168.55.100:8000
-```
-
-Jetson에서 단일 이벤트 전송 확인:
-
-```bash
-python3 ~/jetson_edge_client.py once --event danger --server-url http://192.168.55.100:8000
-python3 ~/jetson_edge_client.py once --event normal --server-url http://192.168.55.100:8000
-```
-
-Jetson AI 추론 실행 전 CUDA 라이브러리 경로가 필요한 경우:
-
-```bash
-export LD_LIBRARY_PATH="$HOME/.local/lib/python3.10/site-packages/nvidia/cu12/lib:$LD_LIBRARY_PATH"
-```
-
-실시간 추론 스크립트는 낙상 확률이 임계값 이상이면 `danger`, 이후 확률이 낮아지면 `normal`을 다시 서버로 보내야 한다. 그래야 앱 화면이 낙상 이후 정상 상태로 복귀한다.
+USB-C 연결에서 사용했던 `192.168.55.1`(Jetson), `192.168.55.100`(PC)은 예시입니다. 실행 장치에서 실제 IP를 확인하고 [실행 안내](../../docs/RUNBOOK.md)의 주소·작업 폴더를 적용합니다.
 
 ## Jetson에서 서버 주소 정하기
 
@@ -100,7 +66,7 @@ http://172.20.10.2:8000
 Jetson에서:
 
 ```bash
-cd Hanium_app/server
+cd app/server
 python3 jetson_edge_client.py health --server-url http://172.20.10.2:8000
 ```
 
@@ -109,7 +75,7 @@ python3 jetson_edge_client.py health --server-url http://172.20.10.2:8000
 Jetson에서:
 
 ```bash
-cd Hanium_app/server
+cd app/server
 SERVER_URL=http://172.20.10.2:8000 ./run_jetson_edge_mock.sh
 ```
 
@@ -169,7 +135,7 @@ python3 jetson_edge_client.py live-status \
   --server-url http://127.0.0.1:8000
 
 # 파이프로 바로 연결 (run_live.sh 로그 중 LIVE_STATUS= 줄만 골라 전송)
-./edge_ai/jetson/run_live.sh | python3 jetson_edge_client.py stdin-json --server-url http://192.168.55.100:8000
+./edge_ai/jetson/run_live.sh | python3 app/server/jetson_edge_client.py stdin-json --server-url http://192.168.55.100:8000
 ```
 
 변환 규칙:
@@ -177,9 +143,11 @@ python3 jetson_edge_client.py live-status \
 | edge_ai 출력 | 서버로 보내는 값 |
 |---|---|
 | `fall.alarm == true` (상태기계 CONFIRMED) | `status: danger`, `pose: lying` |
-| 그 외 | `status: normal`, `activity`에 따라 `pose`(walking / sitting / lying / standing) |
-| `health.respiratory.breathing_rate_bpm` (신뢰 가능할 때만 값 존재) | `breathingRate`, `breathingConfidence` — 값이 없으면 보내지 않음 |
-| 위치 | 모델은 방 단위로 판단하고 좌표를 추정하지 않으므로, 센서가 설치된 방의 도면 좌표(`--room-x`, `--room-y`)를 사용 |
+| 그 외 | 현재는 `status: normal`로 전달. `unknown`·`model_unavailable` 구분이 앱까지 유지되지 않는 보완 과제 있음 |
+| `health.respiratory.breathing_rate_bpm` | 연결 클라이언트는 값이 없으면 생략. 서버는 누락값을 예시값으로 보충하므로 화면 실측 여부를 별도 확인 |
+| 위치 | 모델은 방 이름·좌표를 출력하지 않음. 운영자가 지정한 설치 위치(`--room-x`, `--room-y`)를 사용 |
+
+현재 `live-status`는 `unix_time` 변경 여부를 확인하지만 오래된 레코드의 나이를 검사하지 않습니다. 모델 미설치, 센서 단절, 예시 호흡값 처리에 관한 [확인 사항](../../docs/IMPLEMENTATION_STATUS.md#우선-보완할-구현-항목)을 함께 확인하세요.
 
 ## 그 밖의 AI 출력 연결 (단순 JSON)
 
@@ -192,6 +160,8 @@ python3 jetson_edge_client.py live-status \
 ```bash
 python3 ai_inference.py | python3 jetson_edge_client.py stdin-json --server-url http://172.20.10.2:8000
 ```
+
+이 단순 JSON 경로는 `lying`을 `danger`로 매핑합니다. 현재 낙상 상태기계와 동일한 판정 규칙이 아니므로 실제 추론 연결에는 `live-status`를 사용합니다.
 
 지원 label:
 

@@ -16,16 +16,17 @@ WiFi CSI 엣지 추론 결과를 받아 보호자에게 실시간 상태·위치
 | `server/jetson_edge_client.py` | 엣지 추론 결과를 서버로 전달 (`live-status`), 발표용 시나리오 재현 (`sequence`, `once`) |
 | `server/main.py`, `routers/`, `services/` | 초기 FastAPI 프로토타입 (현재 미사용) |
 
+[전체 실행 순서와 네트워크 주소](../docs/RUNBOOK.md) · [현재 구현의 확인 사항](../docs/IMPLEMENTATION_STATUS.md)
+
 ## 실행
 
 ```powershell
-# 1) 서버
+# 1) 서버 (별도 터미널, app 폴더 기준)
 cd server
 $env:REAL_SENSOR_ONLY="true"
 .\run_mock_server_node.cmd          # http://127.0.0.1:8000/admin
 
-# 2) 앱
-cd ..
+# 2) 앱 (새 터미널에서 app 폴더로 이동)
 flutter pub get
 flutter run --dart-define=SERVER_URL=http://<서버 IP>:8000 --dart-define=DEMO_MODE=false
 ```
