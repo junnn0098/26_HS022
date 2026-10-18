@@ -22,8 +22,8 @@ from .train import file_digest, predict
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--weights", type=Path, required=True)
-    parser.add_argument("--channels", choices=("all", "csi", "lltf", "non_csi"), default="all",
-                        help="must match how the weights were trained (team weights: all)")
+    parser.add_argument("--channels", choices=("all", "csi", "lltf", "non_csi"),
+                        help="channel set used in training (default: the weights' .json card, else all = team weights)")
     parser.add_argument("--npz-dir", type=Path, default=DEFAULT_NPZ_DIR)
     parser.add_argument("--metadata", type=Path, default=DEFAULT_METADATA)
     parser.add_argument("--batches", nargs="*", help="dataset batches to evaluate (default: all)")
@@ -33,6 +33,9 @@ def main() -> None:
 
     import torch
 
+    card = args.weights.with_suffix(".json")
+    if args.channels is None:
+        args.channels = json.loads(card.read_text(encoding="utf-8"))["channels"] if card.exists() else "all"
     model = CSI1DCNN()
     model.load_state_dict(torch.load(args.weights, map_location="cpu", weights_only=True))
     windows, rows = load_windows(args.npz_dir, args.metadata, args.batches)

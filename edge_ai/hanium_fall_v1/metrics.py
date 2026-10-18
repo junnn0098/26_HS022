@@ -75,6 +75,8 @@ def summarize(runs: list[dict], keys=("recall", "precision", "f1", "specificity"
         if values:
             summary[key] = {"mean": round(float(np.mean(values)), 4), "std": round(float(np.std(values)), 4),
                             "min": round(float(np.min(values)), 4), "max": round(float(np.max(values)), 4)}
+        summary.setdefault("runs_with_value", {})[key] = len(values)
     for key in ("tp", "fp", "tn", "fn"):
-        summary[key] = int(sum(run[key] for run in runs))
+        if all(key in run for run in runs):
+            summary[key] = int(sum(run[key] for run in runs))
     return summary

@@ -109,7 +109,19 @@ def predict(model, x: np.ndarray, batch_size: int = 256) -> np.ndarray:
 
 
 def file_digest(path: Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    """SHA-256 of the file; text files are hashed with LF line endings so Windows and Linux agree."""
+    data = Path(path).read_bytes()
+    if Path(path).suffix in (".csv", ".json", ".py", ".md", ".txt"):
+        data = data.replace(b"\r\n", b"\n")
+    return hashlib.sha256(data).hexdigest()
+
+
+def environment() -> dict:
+    import platform
+
+    import torch
+
+    return {"python": platform.python_version(), "numpy": np.__version__, "torch": torch.__version__}
 
 
 def main() -> None:
@@ -133,6 +145,7 @@ def main() -> None:
     import torch
 
     torch.set_num_threads(max(1, min(args.threads, os.cpu_count() or 1)))
+    torch.use_deterministic_algorithms(True, warn_only=True)
     windows, rows = load_windows(args.npz_dir, args.metadata, args.batches)
     x = preprocess(windows, args.channels)
     del windows
@@ -141,7 +154,7 @@ def main() -> None:
     config = {"channels": args.channels, "epochs": args.epochs, "lr": args.lr, "batch_size": args.batch_size,
               "loss": "weighted cross-entropy", "optimizer": "Adam(wd=1e-4) + cosine", "threshold": 0.5,
               "parameters": parameter_count(CSI1DCNN()),
-              "metadata_sha256": file_digest(args.metadata)}
+              "metadata_sha256": file_digest(args.metadata), "threads": args.threads, "environment": environment()}
 
     if args.final:
         if not args.save:

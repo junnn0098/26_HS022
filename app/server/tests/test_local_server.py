@@ -84,14 +84,15 @@ class LocalServer:
 class WebSocketReader:
     """Minimal client for the server's unmasked text frames."""
 
-    def __init__(self, port: int) -> None:
+    def __init__(self, port: int, query: str = "", origin: str | None = None) -> None:
         self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
         key = base64.b64encode(os.urandom(16)).decode("ascii")
+        origin_header = f"Origin: {origin}\r\n" if origin else ""
         self.sock.sendall(
             (
-                f"GET /ws/location HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
+                f"GET /ws/location{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
                 "Upgrade: websocket\r\nConnection: Upgrade\r\n"
-                f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n"
+                f"{origin_header}Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n"
             ).encode("ascii")
         )
         self.buffer = b""
@@ -283,6 +284,19 @@ class LocalServerWithTokenTest(unittest.TestCase):
         body = {"x": 0.5, "y": 0.5, "status": "normal", "source": "scripted_demo"}
         self.assertEqual(self.server.request("POST", "/sensor/update", body)[0], 401)
         self.assertEqual(self.server.request("POST", "/sensor/update", body, auth)[0], 200)
+
+    def test_websocket_requires_token_and_known_origin(self) -> None:
+        with self.assertRaises(ConnectionError):
+            WebSocketReader(self.server.port)
+        with self.assertRaises(ConnectionError):
+            WebSocketReader(self.server.port, "?token=wrong")
+        with self.assertRaises(ConnectionError):
+            WebSocketReader(self.server.port, f"?token={self.TOKEN}", origin="http://evil.example")
+        reader = WebSocketReader(self.server.port, f"?token={self.TOKEN}", origin="http://allowed.example")
+        try:
+            self.assertIn("status", reader.read_json())
+        finally:
+            reader.close()
 
     def test_cors_allowlist(self) -> None:
         _, headers, _ = self.server.request("GET", "/health", headers={"Origin": "http://allowed.example"})

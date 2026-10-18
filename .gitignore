@@ -28,3 +28,16 @@ GoogleService-Info.plist
 *firebase*credentials*.json
 .env.*
 !.env.example
+
+# Python / Node caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+node_modules/
+
+# Private participant name maps (dataset/tools --subject-map) must stay outside the repository
+*subject*map*.csv
+*name*map*.csv
+dataset/private/

@@ -4,12 +4,16 @@ The recorder stored every ADR-018 packet without its first 8 bytes; this script
 puts them back and sends the packets with their original timing (or faster).
 
   python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --port 5005
+  python -m hanium_fall_v1.replay_recording ../dataset/sample/raw/csi-1783443615.fall-12s.csi.jsonl.gz
   python -m hanium_fall_v1.replay_recording ../dataset/raw/recordings/csi-1783443615.csi.jsonl --speed 4
+
+Gzip-compressed recordings (.jsonl.gz) are read directly.
 """
 
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import socket
 import struct
@@ -37,7 +41,9 @@ def main() -> None:
     started = time.monotonic()
     first_ns = None
     sent = 0
-    with args.recording.open(encoding="utf-8") as handle:
+    opener = gzip.open if args.recording.suffix == ".gz" else open
+    offset = 0.0
+    with opener(args.recording, "rt", encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
                 continue

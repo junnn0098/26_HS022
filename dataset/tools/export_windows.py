@@ -29,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-from labels import LABELS
+from labels import LABELS, anonymize
 
 FRAMES = 500
 CHANNELS = 134
@@ -118,7 +118,7 @@ def export_batch(ruview: Path, batch: str, labels_name: str, final_name: str, ou
             "label_ko": LABELS[label]["ko"],
             "category": LABELS[label]["category"],
             "is_fall": int(label == "fall"),
-            "subject": subjects[person] if person else "unrecorded",
+            "subject": anonymize(person, subjects, f"{labels_name} {stem}"),
             **meta,
         })
 

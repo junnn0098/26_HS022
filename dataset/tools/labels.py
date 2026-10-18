@@ -6,6 +6,16 @@ category
   daily      일상 동작
 """
 
+
+def anonymize(person: str | None, subjects: dict[str, str], where: str) -> str:
+    """참여자 이름을 익명 ID로 바꾼다. 대응표에 없으면 이름을 출력하지 않고 멈춘다."""
+    if not person:
+        return "unrecorded"
+    if person not in subjects:
+        raise SystemExit(f"participant missing from --subject-map ({where})")
+    return subjects[person]
+
+
 LABELS = {
     "fall": {"ko": "낙상", "category": "fall"},
     "stumble_no_fall": {"ko": "비틀거리기(넘어지지 않음)", "category": "confusing"},

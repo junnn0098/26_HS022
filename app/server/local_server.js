@@ -900,6 +900,20 @@ function isAuthorized(req) {
   return given.length === expected.length && crypto.timingSafeEqual(given, expected);
 }
 
+// 브라우저는 WebSocket에 헤더를 붙일 수 없어 토큰을 ?token= 쿼리로도 받는다.
+// CORS가 적용되지 않는 WebSocket은 Origin을 직접 확인해, 다른 출처의 웹페이지가 위치 스트림을 열지 못하게 한다.
+function isWebSocketAllowed(req, url) {
+  const origin = String(req.headers.origin || "").replace(/\/+$/, "");
+  if (origin) {
+    const sameHost = origin.replace(/^https?:\/\//, "") === String(req.headers.host || "");
+    if (!sameHost && !CORS_ORIGINS.includes("*") && !CORS_ORIGINS.includes(origin)) return false;
+  }
+  if (!API_TOKEN || isAuthorized(req)) return true;
+  const given = Buffer.from(url.searchParams.get("token") || "", "utf8");
+  const expected = Buffer.from(API_TOKEN, "utf8");
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+}
+
 function isJsonRequest(req) {
   const type = String(req.headers["content-type"] || "")
     .split(";")[0]
@@ -1639,7 +1653,7 @@ function adminHtml() {
     });
 
     renderDemoSteps();
-    const ws = new WebSocket("ws://" + location.host + "/ws/location");
+    const ws = new WebSocket("ws://" + location.host + "/ws/location" + (apiToken ? "?token=" + encodeURIComponent(apiToken) : ""));
     ws.onmessage = (event) => updateLocation(JSON.parse(event.data));
     setInterval(refreshState, 3000);
     refreshState();
@@ -2000,6 +2014,10 @@ server.on("upgrade", (req, socket) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname !== "/ws/location") {
     socket.destroy();
+    return;
+  }
+  if (!isWebSocketAllowed(req, url)) {
+    socket.end("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
     return;
   }
 

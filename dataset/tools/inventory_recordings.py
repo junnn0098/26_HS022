@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from labels import LABELS
+from labels import LABELS, anonymize
 
 KST = timezone(timedelta(hours=9))
 
@@ -134,7 +134,7 @@ def main() -> None:
                 "label": label,
                 "label_ko": LABELS[label]["ko"],
                 "category": LABELS[label]["category"],
-                "subject": subjects[person] if person else "unrecorded",
+                "subject": anonymize(person, subjects, f"{table} {csi_file}"),
                 "window_batch": batch if in_windows else "",
                 **stats,
                 **pose,
