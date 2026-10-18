@@ -13,12 +13,12 @@ WebSocket(기본 8765)으로 JSON을 브로드캐스트합니다.
 
 노드가 신선도 시간(--stale-seconds, 기본 1.5초) 동안 새 프레임을 안 주면
 그 노드는 전송에서 빠집니다. 그래서 ESP 한 대가 꺼지면 대시보드에서도
-해당 노드가 "끊김"으로 보입니다.
+해당 노드가 "대기"로 보입니다.
 
-사용법:
-    pip install --break-system-packages websockets      # 최초 1회
-    cd ~/hanium_jetson                                   # adr018.py import 되는 위치
-    python3 csi_ws_bridge.py --udp-port 5005 --ws-port 8765 --nodes 1,2,3,4
+사용법 (hanium_fall_v2 를 import 하므로 edge_ai/ 폴더에서 모듈로 실행):
+    cd edge_ai
+    python3 -m pip install -r tools/requirements.txt    # 최초 1회
+    python3 -m tools.csi_ws_bridge --udp-port 5005 --ws-port 8765 --nodes 1,2,3,4
 
     # 대시보드(csi_dashboard.html) 맨 위:
     #   const JETSON_WS_URL = "ws://192.168.0.15:8765";
@@ -40,8 +40,8 @@ try:
     import websockets
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
-        "websockets 패키지가 필요합니다. 먼저 실행하세요:\n"
-        "    pip install --break-system-packages websockets"
+        "websockets 패키지가 필요합니다. edge_ai/ 폴더에서 먼저 실행하세요:\n"
+        "    python3 -m pip install -r tools/requirements.txt"
     ) from exc
 
 # 저장소의 검증된 ADR-018 파서를 그대로 사용 (firmware wire format과 1:1 일치)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """저장된 데모 로그를 실시간처럼 한 줄씩 재생 (영상 녹화용).
 
-사용법:
-    python3 play_log.py demo_fall.log            # 0.5초 간격 재생
-    python3 play_log.py demo_fall.log --delay 0.5
-    python3 play_log.py demo_fall.log --no-color
+사용법 (edge_ai/ 폴더에서):
+    python3 -m tools.play_log logs/demo_fall.log            # 0.5초 간격 재생
+    python3 -m tools.play_log logs/demo_fall.log --delay 0.5
+    python3 -m tools.play_log logs/demo_fall.log --no-color
 """
 import argparse, sys, time
 

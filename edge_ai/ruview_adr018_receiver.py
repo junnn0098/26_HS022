@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """RuView ADR-018 UDP receiver and capture validator.
 
-Built for the current ESP32-S3 firmware wire format:
+Built for the current ESP32-S3 firmware wire format (parsed by
+hanium_fall_v2.adr018):
   0..3   magic 0xC5110001 (little-endian u32)
   4      node id (u8)
   5      antenna count (u8)
@@ -25,96 +26,15 @@ import argparse
 import json
 import signal
 import socket
-import struct
 import sys
 import time
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, TextIO
 
-import numpy as np
-
-
-MAGIC = 0xC5110001
-HEADER = struct.Struct("<IBBHIIbbBB")
-HEADER_SIZE = HEADER.size
-
-
-@dataclass(frozen=True)
-class CsiFrame:
-    node_id: int
-    antennas: int
-    subcarriers: int
-    frequency_mhz: int
-    sequence: int
-    rssi_dbm: int
-    noise_floor_dbm: int
-    ppdu: int
-    flags: int
-    amplitude: np.ndarray
-    packet_size: int
-    trailing_bytes: int
-
-
-def parse_adr018(data: bytes) -> CsiFrame:
-    if len(data) < HEADER_SIZE:
-        raise ValueError(f"short packet: {len(data)} < {HEADER_SIZE}")
-
-    (
-        magic,
-        node_id,
-        antennas,
-        subcarriers,
-        frequency_mhz,
-        sequence,
-        rssi_dbm,
-        noise_floor_dbm,
-        ppdu,
-        flags,
-    ) = HEADER.unpack_from(data)
-
-    if magic != MAGIC:
-        raise ValueError(f"different magic: 0x{magic:08X}")
-    if not 1 <= antennas <= 4:
-        raise ValueError(f"invalid antenna count: {antennas}")
-    if not 1 <= subcarriers <= 2048:
-        raise ValueError(f"invalid subcarrier count: {subcarriers}")
-
-    sample_count = antennas * subcarriers
-    iq_byte_count = sample_count * 2
-    expected_size = HEADER_SIZE + iq_byte_count
-    if len(data) < expected_size:
-        raise ValueError(
-            f"truncated I/Q: got {len(data)} bytes, expected at least {expected_size} "
-            f"for {antennas}x{subcarriers}"
-        )
-
-    iq = np.frombuffer(
-        data,
-        dtype=np.int8,
-        count=iq_byte_count,
-        offset=HEADER_SIZE,
-    ).astype(np.float32, copy=False)
-    iq = iq.reshape(sample_count, 2)
-    amplitude = np.hypot(iq[:, 0], iq[:, 1])
-    if antennas > 1:
-        amplitude = amplitude.reshape(antennas, subcarriers)
-
-    return CsiFrame(
-        node_id=node_id,
-        antennas=antennas,
-        subcarriers=subcarriers,
-        frequency_mhz=frequency_mhz,
-        sequence=sequence,
-        rssi_dbm=rssi_dbm,
-        noise_floor_dbm=noise_floor_dbm,
-        ppdu=ppdu,
-        flags=flags,
-        amplitude=amplitude,
-        packet_size=len(data),
-        trailing_bytes=len(data) - expected_size,
-    )
+# Use the same strict parser as the v2 model pipeline so this validator accepts
+# and rejects exactly the frames that live inference would.
+from hanium_fall_v2.adr018 import CsiFrame, parse_adr018, sequence_gap
 
 
 class ReceiverStats:
@@ -145,11 +65,11 @@ class ReceiverStats:
 
         previous = self.last_sequence.get(frame.node_id)
         if previous is not None:
-            delta = (frame.sequence - previous) & 0xFFFFFFFF
-            if delta == 0 or delta >= 0x80000000:
+            gap = sequence_gap(previous, frame.sequence)
+            if gap < 0:
                 self.duplicates_or_reordered[frame.node_id] += 1
-            elif delta > 1:
-                self.sequence_gaps[frame.node_id] += delta - 1
+            elif gap > 0:
+                self.sequence_gaps[frame.node_id] += gap
         self.last_sequence[frame.node_id] = frame.sequence
 
     def interval_report(self) -> tuple[float, float]:

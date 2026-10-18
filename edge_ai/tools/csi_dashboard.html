@@ -1,6 +1,7 @@
+<meta charset="utf-8">
 <title>CSI 실시간 모니터</title>
 <style>
-  /* ── 레이아웃: 상단 상태바 + 좌(노드 1~4 각각 파형 2×2)·우(녹화 낙상) · 좁으면 세로 적층 ──
+  /* ── 레이아웃: 상단 상태바 + 좌(노드 1~4 각각 파형 2×2)·우(합성 예시 낙상 파형) · 좁으면 세로 적층 ──
      control-room 다크 단일 테마: 계측기 느낌의 모노 데이터 + 산세리프 UI */
   :root{
     --bg:#070b12;
@@ -68,6 +69,14 @@
 
   .canvas-wrap{position:relative;flex:1 1 auto;min-height:90px}
   canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  /* 실측이 아닌 파형 워터마크: 노드 목업(미연결)·대기(수신 없음), 합성 예시 낙상 패널 */
+  .panel[data-on="demo"] .canvas-wrap::after,.panel[data-on="0"] .canvas-wrap::after,.panel.fall .canvas-wrap::after{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+    font-family:var(--mono);font-size:18px;font-weight:600;letter-spacing:1px;opacity:.55}
+  .panel[data-on="demo"] .canvas-wrap::after{content:"목업 · 실측 아님";color:var(--warn)}
+  .panel[data-on="0"] .canvas-wrap::after{content:"대기 · 수신 없음";color:var(--muted)}
+  .panel.fall .canvas-wrap::after{content:"합성 예시 · 실측 아님";color:var(--fg);inset:auto auto 10px 12px;
+    font-size:12px;padding:4px 9px;border-radius:5px;background:rgba(7,11,18,.82);border:1px solid var(--alert);opacity:1}
 
   /* 낙상 패널 */
   .phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px 11px 18px;border-bottom:1px solid var(--edge)}
@@ -105,10 +114,10 @@
     <div class="nodes" id="nodes"></div>
 
     <!-- 낙상 패널 -->
-    <section class="panel fall" aria-label="녹화된 낙상 CSI 파형">
+    <section class="panel fall" aria-label="합성 예시 파형 (실측 아님)">
       <div class="phead">
-        <span class="tag">REC</span><h2>낙상 CSI 파형 (녹화)</h2>
-        <span class="note">실측 낙상 클립 · 5초 반복</span>
+        <span class="tag">합성</span><h2>합성 예시 파형 (실측 아님)</h2>
+        <span class="note">낙상 구간 설명용 · 코드로 생성 · 5초 반복</span>
       </div>
       <div class="canvas-wrap"><canvas id="fallCanvas"></canvas></div>
       <div class="meter">
@@ -216,7 +225,8 @@ function renderNode(nd){
   ctx.stroke();
 }
 
-/* ===== 낙상 녹화 클립 ===== */
+/* ===== 합성 예시 낙상 파형 (실측 아님) =====
+   고정 시드 난수로 만든 설명용 데이터입니다. 녹화된 CSI 클립이 아닙니다. */
 const FALL_FRAMES=160, FALL_ONSET=76, FALL_SETTLE=104;
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const rnd=mulberry(20260902);
@@ -257,11 +267,13 @@ function loop(now){
       const nd=nodes[id];
       if(!wsConnected){ demoAccum[id]+=dt;const per=1000/LIVE_HZ;
         while(demoAccum[id]>=per){pushFrame(nd,genFrame(nd,now));demoAccum[id]-=per;} }
-      // pps 및 노드 연결표시
-      if(now-nd.lastSec>=1000){nd.pps=nd.frames;nd.frames=0;nd.lastSec=now;
-        document.getElementById('pps'+id).textContent=(wsConnected?(nd.pps):LIVE_HZ)+' pps';}
+      // pps 및 노드 연결표시 — 실시간 수신 중('1')일 때만 pps, 아니면 목업/대기
+      let tick=false;
+      if(now-nd.lastSec>=1000){nd.pps=nd.frames;nd.frames=0;nd.lastSec=now;tick=true;}
       const on = wsConnected ? (now-nd.lastMsg<2000?'1':'0') : 'demo';
-      if(nd.el.dataset.on!==on) nd.el.dataset.on=on;
+      if(tick||nd.el.dataset.on!==on){
+        nd.el.dataset.on=on;
+        document.getElementById('pps'+id).textContent=on==='1'?nd.pps+' pps':(on==='0'?'대기':'목업');}
     });
     fallAccum+=dt;const fper=1000/FALL_HZ;while(fallAccum>=fper){fallHead=(fallHead+1)%FALL_FRAMES;fallAccum-=fper;}
   }
@@ -276,7 +288,8 @@ function connectWS(){
   if(!JETSON_WS_URL){setStatus('demo','데모 모드 (목업 파형)');return;}
   setStatus('wait','연결 시도 중…');
   try{ws=new WebSocket(JETSON_WS_URL);}catch(e){setStatus('demo','데모 모드 (연결 실패)');return;}
-  ws.onopen=()=>{wsConnected=true;setStatus('live','실시간 연결됨');};
+  // 연결되면 목업 이력을 지워 실측 파형과 섞이지 않게 함
+  ws.onopen=()=>{wsConnected=true;NODE_IDS.forEach(id=>nodes[id].ring.forEach(r=>r.fill(0.5)));setStatus('live','실시간 연결됨');};
   ws.onclose=()=>{wsConnected=false;setStatus('demo','데모 모드 (연결 끊김)');};
   ws.onerror=()=>{wsConnected=false;setStatus('demo','데모 모드 (연결 실패)');};
   ws.onmessage=(ev)=>{

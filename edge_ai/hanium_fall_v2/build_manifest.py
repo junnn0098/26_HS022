@@ -16,6 +16,7 @@ from .labels import ACTIVITIES, people_bucket, validate_label
 
 COUNT_LABELS = ("0", "1", "2", "3plus")
 EVENT_ACTIVITIES = {"fall", "sit_down", "lie_down", "stand_up"}
+# ".v1" is the manifest schema version, not the model generation (this feeds the v2 model).
 MANIFEST_SCHEMA = "hanium.ruview.window-manifest.v1"
 
 
@@ -106,7 +107,7 @@ def read_session(path: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build subject-disjoint CSI window manifest")
     parser.add_argument("capture_dirs", nargs="+", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("manifests/dataset_v1.json"))
+    parser.add_argument("--output", type=Path, default=Path("manifests/v2_dataset.json"))
     parser.add_argument("--stride-seconds", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=20260828)
     parser.add_argument("--allow-incomplete-splits", action="store_true")
