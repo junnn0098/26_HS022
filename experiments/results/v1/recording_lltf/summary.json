@@ -1,0 +1,55 @@
+{
+  "protocol": "recording",
+  "channels": "lltf",
+  "epochs": 25,
+  "lr": 0.001,
+  "batch_size": 32,
+  "loss": "weighted cross-entropy",
+  "optimizer": "Adam(wd=1e-4) + cosine",
+  "threshold": 0.5,
+  "parameters": 65762,
+  "metadata_sha256": "2de39b2d116898ca371fe48158da6f6a3c894c3c41009e111877be37f1cbf823",
+  "runs": 5,
+  "summary": {
+    "recall": {
+      "mean": 0.4022,
+      "std": 0.2028,
+      "min": 0.0704,
+      "max": 0.651
+    },
+    "precision": {
+      "mean": 0.3361,
+      "std": 0.1456,
+      "min": 0.1186,
+      "max": 0.5061
+    },
+    "f1": {
+      "mean": 0.3637,
+      "std": 0.1733,
+      "min": 0.0884,
+      "max": 0.5695
+    },
+    "specificity": {
+      "mean": 0.4599,
+      "std": 0.0633,
+      "min": 0.3615,
+      "max": 0.5379
+    },
+    "accuracy": {
+      "mean": 0.4333,
+      "std": 0.0992,
+      "min": 0.3036,
+      "max": 0.5855
+    },
+    "auroc": {
+      "mean": 0.4379,
+      "std": 0.1194,
+      "min": 0.307,
+      "max": 0.6153
+    },
+    "tp": 398,
+    "fp": 676,
+    "tn": 572,
+    "fn": 571
+  }
+}

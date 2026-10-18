@@ -1,0 +1,58 @@
+{
+  "protocol": "random",
+  "batches": [
+    "b1_0708_0709"
+  ],
+  "channels": "all",
+  "epochs": 25,
+  "lr": 0.001,
+  "batch_size": 32,
+  "loss": "weighted cross-entropy",
+  "optimizer": "Adam(wd=1e-4) + cosine",
+  "threshold": 0.5,
+  "parameters": 65762,
+  "metadata_sha256": "2de39b2d116898ca371fe48158da6f6a3c894c3c41009e111877be37f1cbf823",
+  "runs": 5,
+  "summary": {
+    "recall": {
+      "mean": 0.9967,
+      "std": 0.0067,
+      "min": 0.9833,
+      "max": 1.0
+    },
+    "precision": {
+      "mean": 0.9901,
+      "std": 0.0081,
+      "min": 0.9833,
+      "max": 1.0
+    },
+    "f1": {
+      "mean": 0.9933,
+      "std": 0.0062,
+      "min": 0.9833,
+      "max": 1.0
+    },
+    "specificity": {
+      "mean": 0.9958,
+      "std": 0.0034,
+      "min": 0.993,
+      "max": 1.0
+    },
+    "accuracy": {
+      "mean": 0.9961,
+      "std": 0.0037,
+      "min": 0.9901,
+      "max": 1.0
+    },
+    "auroc": {
+      "mean": 0.9999,
+      "std": 0.0002,
+      "min": 0.9995,
+      "max": 1.0
+    },
+    "tp": 299,
+    "fp": 3,
+    "tn": 712,
+    "fn": 1
+  }
+}

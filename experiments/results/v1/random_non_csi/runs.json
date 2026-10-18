@@ -1,0 +1,697 @@
+[
+ {
+  "n": 442,
+  "falls": 194,
+  "threshold": 0.5,
+  "tp": 191,
+  "fp": 24,
+  "tn": 224,
+  "fn": 3,
+  "recall": 0.9845,
+  "precision": 0.8884,
+  "f1": 0.934,
+  "specificity": 0.9032,
+  "accuracy": 0.9389,
+  "auroc": 0.9897,
+  "seed": 0,
+  "fold": 0,
+  "train_windows": 1775,
+  "test_recordings": 45,
+  "seconds": 79.9,
+  "loss_history": [
+   0.6407,
+   0.60317,
+   0.56883,
+   0.5104,
+   0.47467,
+   0.44886,
+   0.37453,
+   0.35843,
+   0.3511,
+   0.31093,
+   0.26735,
+   0.27279,
+   0.27303,
+   0.26802,
+   0.24106,
+   0.25254,
+   0.25435,
+   0.22861,
+   0.23151,
+   0.20748,
+   0.20005,
+   0.20802,
+   0.20906,
+   0.19961,
+   0.1843
+  ],
+  "per_label": {
+   "bend_pickup": {
+    "category": "confusing",
+    "n": 10,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lie_stand": {
+    "category": "confusing",
+    "n": 18,
+    "predicted_fall": 11,
+    "predicted_fall_rate": 0.6111
+   },
+   "sit_lie": {
+    "category": "confusing",
+    "n": 12,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "squat_stand": {
+    "category": "confusing",
+    "n": 7,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.2857
+   },
+   "stumble_no_fall": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walk_pickup": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "arm_wave": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "chair_workout": {
+    "category": "daily",
+    "n": 6,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lying": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_down": {
+    "category": "daily",
+    "n": 9,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_stand": {
+    "category": "daily",
+    "n": 64,
+    "predicted_fall": 3,
+    "predicted_fall_rate": 0.0469
+   },
+   "sitting": {
+    "category": "daily",
+    "n": 32,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.0625
+   },
+   "standing": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walking": {
+    "category": "daily",
+    "n": 29,
+    "predicted_fall": 6,
+    "predicted_fall_rate": 0.2069
+   },
+   "fall": {
+    "category": "fall",
+    "n": 194,
+    "predicted_fall": 191,
+    "predicted_fall_rate": 0.9845
+   }
+  }
+ },
+ {
+  "n": 442,
+  "falls": 194,
+  "threshold": 0.5,
+  "tp": 187,
+  "fp": 9,
+  "tn": 239,
+  "fn": 7,
+  "recall": 0.9639,
+  "precision": 0.9541,
+  "f1": 0.959,
+  "specificity": 0.9637,
+  "accuracy": 0.9638,
+  "auroc": 0.9936,
+  "seed": 1,
+  "fold": 0,
+  "train_windows": 1775,
+  "test_recordings": 44,
+  "seconds": 73.9,
+  "loss_history": [
+   0.64222,
+   0.58705,
+   0.53056,
+   0.48427,
+   0.44006,
+   0.39601,
+   0.36336,
+   0.35548,
+   0.33135,
+   0.32044,
+   0.31117,
+   0.286,
+   0.30472,
+   0.27246,
+   0.25442,
+   0.25463,
+   0.23861,
+   0.23146,
+   0.21881,
+   0.20545,
+   0.19006,
+   0.20936,
+   0.20329,
+   0.1917,
+   0.18305
+  ],
+  "per_label": {
+   "bend_pickup": {
+    "category": "confusing",
+    "n": 10,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lie_stand": {
+    "category": "confusing",
+    "n": 18,
+    "predicted_fall": 5,
+    "predicted_fall_rate": 0.2778
+   },
+   "sit_lie": {
+    "category": "confusing",
+    "n": 12,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "squat_stand": {
+    "category": "confusing",
+    "n": 7,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.2857
+   },
+   "stumble_no_fall": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walk_pickup": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "arm_wave": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "chair_workout": {
+    "category": "daily",
+    "n": 6,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lying": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_down": {
+    "category": "daily",
+    "n": 9,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_stand": {
+    "category": "daily",
+    "n": 64,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sitting": {
+    "category": "daily",
+    "n": 32,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "standing": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walking": {
+    "category": "daily",
+    "n": 29,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.069
+   },
+   "fall": {
+    "category": "fall",
+    "n": 194,
+    "predicted_fall": 187,
+    "predicted_fall_rate": 0.9639
+   }
+  }
+ },
+ {
+  "n": 442,
+  "falls": 194,
+  "threshold": 0.5,
+  "tp": 191,
+  "fp": 13,
+  "tn": 235,
+  "fn": 3,
+  "recall": 0.9845,
+  "precision": 0.9363,
+  "f1": 0.9598,
+  "specificity": 0.9476,
+  "accuracy": 0.9638,
+  "auroc": 0.9945,
+  "seed": 2,
+  "fold": 0,
+  "train_windows": 1775,
+  "test_recordings": 45,
+  "seconds": 81.4,
+  "loss_history": [
+   0.63815,
+   0.57753,
+   0.52529,
+   0.46547,
+   0.41789,
+   0.38981,
+   0.37913,
+   0.35427,
+   0.31645,
+   0.31601,
+   0.29908,
+   0.28995,
+   0.24904,
+   0.23541,
+   0.22164,
+   0.23155,
+   0.19678,
+   0.21169,
+   0.18785,
+   0.17273,
+   0.18896,
+   0.15836,
+   0.17075,
+   0.15298,
+   0.14922
+  ],
+  "per_label": {
+   "bend_pickup": {
+    "category": "confusing",
+    "n": 10,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lie_stand": {
+    "category": "confusing",
+    "n": 18,
+    "predicted_fall": 8,
+    "predicted_fall_rate": 0.4444
+   },
+   "sit_lie": {
+    "category": "confusing",
+    "n": 12,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "squat_stand": {
+    "category": "confusing",
+    "n": 7,
+    "predicted_fall": 3,
+    "predicted_fall_rate": 0.4286
+   },
+   "stumble_no_fall": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walk_pickup": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "arm_wave": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "chair_workout": {
+    "category": "daily",
+    "n": 6,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lying": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_down": {
+    "category": "daily",
+    "n": 9,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_stand": {
+    "category": "daily",
+    "n": 64,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sitting": {
+    "category": "daily",
+    "n": 32,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "standing": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walking": {
+    "category": "daily",
+    "n": 29,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.069
+   },
+   "fall": {
+    "category": "fall",
+    "n": 194,
+    "predicted_fall": 191,
+    "predicted_fall_rate": 0.9845
+   }
+  }
+ },
+ {
+  "n": 442,
+  "falls": 194,
+  "threshold": 0.5,
+  "tp": 188,
+  "fp": 13,
+  "tn": 235,
+  "fn": 6,
+  "recall": 0.9691,
+  "precision": 0.9353,
+  "f1": 0.9519,
+  "specificity": 0.9476,
+  "accuracy": 0.957,
+  "auroc": 0.9932,
+  "seed": 3,
+  "fold": 0,
+  "train_windows": 1775,
+  "test_recordings": 45,
+  "seconds": 73.6,
+  "loss_history": [
+   0.63117,
+   0.57154,
+   0.50724,
+   0.46375,
+   0.44202,
+   0.40619,
+   0.34874,
+   0.32776,
+   0.32981,
+   0.3338,
+   0.30572,
+   0.29021,
+   0.2807,
+   0.24337,
+   0.26926,
+   0.23733,
+   0.21894,
+   0.20331,
+   0.21763,
+   0.20336,
+   0.2012,
+   0.198,
+   0.19708,
+   0.17639,
+   0.18935
+  ],
+  "per_label": {
+   "bend_pickup": {
+    "category": "confusing",
+    "n": 10,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lie_stand": {
+    "category": "confusing",
+    "n": 18,
+    "predicted_fall": 6,
+    "predicted_fall_rate": 0.3333
+   },
+   "sit_lie": {
+    "category": "confusing",
+    "n": 12,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "squat_stand": {
+    "category": "confusing",
+    "n": 7,
+    "predicted_fall": 3,
+    "predicted_fall_rate": 0.4286
+   },
+   "stumble_no_fall": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walk_pickup": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "arm_wave": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "chair_workout": {
+    "category": "daily",
+    "n": 6,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lying": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_down": {
+    "category": "daily",
+    "n": 9,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_stand": {
+    "category": "daily",
+    "n": 64,
+    "predicted_fall": 3,
+    "predicted_fall_rate": 0.0469
+   },
+   "sitting": {
+    "category": "daily",
+    "n": 32,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "standing": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walking": {
+    "category": "daily",
+    "n": 29,
+    "predicted_fall": 1,
+    "predicted_fall_rate": 0.0345
+   },
+   "fall": {
+    "category": "fall",
+    "n": 194,
+    "predicted_fall": 188,
+    "predicted_fall_rate": 0.9691
+   }
+  }
+ },
+ {
+  "n": 442,
+  "falls": 194,
+  "threshold": 0.5,
+  "tp": 184,
+  "fp": 19,
+  "tn": 229,
+  "fn": 10,
+  "recall": 0.9485,
+  "precision": 0.9064,
+  "f1": 0.927,
+  "specificity": 0.9234,
+  "accuracy": 0.9344,
+  "auroc": 0.9874,
+  "seed": 4,
+  "fold": 0,
+  "train_windows": 1775,
+  "test_recordings": 45,
+  "seconds": 73.0,
+  "loss_history": [
+   0.63335,
+   0.58138,
+   0.52166,
+   0.49633,
+   0.44164,
+   0.4175,
+   0.39852,
+   0.37832,
+   0.36575,
+   0.33497,
+   0.31048,
+   0.30107,
+   0.30756,
+   0.26892,
+   0.27177,
+   0.24628,
+   0.22666,
+   0.22775,
+   0.23934,
+   0.20958,
+   0.21496,
+   0.21041,
+   0.19533,
+   0.19599,
+   0.20629
+  ],
+  "per_label": {
+   "bend_pickup": {
+    "category": "confusing",
+    "n": 10,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lie_stand": {
+    "category": "confusing",
+    "n": 18,
+    "predicted_fall": 9,
+    "predicted_fall_rate": 0.5
+   },
+   "sit_lie": {
+    "category": "confusing",
+    "n": 12,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "squat_stand": {
+    "category": "confusing",
+    "n": 7,
+    "predicted_fall": 1,
+    "predicted_fall_rate": 0.1429
+   },
+   "stumble_no_fall": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.1818
+   },
+   "walk_pickup": {
+    "category": "confusing",
+    "n": 11,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "arm_wave": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "chair_workout": {
+    "category": "daily",
+    "n": 6,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "lying": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_down": {
+    "category": "daily",
+    "n": 9,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "sit_stand": {
+    "category": "daily",
+    "n": 64,
+    "predicted_fall": 2,
+    "predicted_fall_rate": 0.0312
+   },
+   "sitting": {
+    "category": "daily",
+    "n": 32,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "standing": {
+    "category": "daily",
+    "n": 13,
+    "predicted_fall": 0,
+    "predicted_fall_rate": 0.0
+   },
+   "walking": {
+    "category": "daily",
+    "n": 29,
+    "predicted_fall": 5,
+    "predicted_fall_rate": 0.1724
+   },
+   "fall": {
+    "category": "fall",
+    "n": 194,
+    "predicted_fall": 184,
+    "predicted_fall_rate": 0.9485
+   }
+  }
+ }
+]

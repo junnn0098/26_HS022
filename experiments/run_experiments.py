@@ -34,6 +34,11 @@ plt.rcParams.update({"svg.fonttype": "none", "svg.hashsalt": "hanium-experiments
                      "axes.spines.right": False, "axes.titleweight": "bold"})
 
 
+def lf_sha256(path: Path) -> str:
+    """SHA-256 of the content with CRLF normalised to LF, so Windows and Linux checkouts agree."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
@@ -259,7 +264,9 @@ def main() -> int:
                 "python": platform.python_version(), "platform": platform.system(), "machine": platform.machine(),
                 "dependencies": {x: importlib.metadata.version(x) for x in ("numpy", "matplotlib")},
                 "configs": {"feature": asdict(FeatureConfig()), "runtime": asdict(RuntimeConfig()), "health": asdict(HealthConfig())},
-                "seeds": list(SEEDS), "input_sha256": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
+                "seeds": list(SEEDS),
+                "hash_method": "SHA-256 of file content with CRLF normalised to LF; POSIX paths from the repository root",
+                "input_sha256": {p.relative_to(ROOT).as_posix(): lf_sha256(p) for p in inputs},
                 "scope": "Synthetic software experiments only. No trained weights, human measurements, ESP32, Jetson, Flutter or FCM."}
     write_json(output / "environment.json", metadata)
     summary = {"fall": fall_experiment(output), "respiration": respiration_experiment(output),

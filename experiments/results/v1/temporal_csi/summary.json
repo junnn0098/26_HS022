@@ -1,0 +1,55 @@
+{
+  "protocol": "temporal",
+  "channels": "csi",
+  "epochs": 25,
+  "lr": 0.001,
+  "batch_size": 32,
+  "loss": "weighted cross-entropy",
+  "optimizer": "Adam(wd=1e-4) + cosine",
+  "threshold": 0.5,
+  "parameters": 65762,
+  "metadata_sha256": "2de39b2d116898ca371fe48158da6f6a3c894c3c41009e111877be37f1cbf823",
+  "runs": 3,
+  "summary": {
+    "recall": {
+      "mean": 0.0074,
+      "std": 0.0047,
+      "min": 0.0028,
+      "max": 0.0139
+    },
+    "precision": {
+      "mean": 0.7778,
+      "std": 0.3143,
+      "min": 0.3333,
+      "max": 1.0
+    },
+    "f1": {
+      "mean": 0.0145,
+      "std": 0.0089,
+      "min": 0.0056,
+      "max": 0.0267
+    },
+    "specificity": {
+      "mean": 0.9918,
+      "std": 0.0116,
+      "min": 0.9753,
+      "max": 1.0
+    },
+    "accuracy": {
+      "mean": 0.5292,
+      "std": 0.004,
+      "min": 0.5236,
+      "max": 0.5327
+    },
+    "auroc": {
+      "mean": 0.5334,
+      "std": 0.0175,
+      "min": 0.5089,
+      "max": 0.5488
+    },
+    "tp": 8,
+    "fp": 10,
+    "tn": 1205,
+    "fn": 1069
+  }
+}

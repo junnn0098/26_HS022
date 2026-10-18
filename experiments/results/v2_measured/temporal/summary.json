@@ -1,0 +1,48 @@
+{
+  "protocol": "temporal",
+  "pipeline": "v2 features + MultiNodeFallModel",
+  "packet_widths": "all",
+  "epochs": 25,
+  "threshold": 0.5,
+  "loss": "weighted CE(10 activities) + 0.4 CE(count) + 0.1 MSE(quality)",
+  "optimizer": "AdamW 1e-3 + cosine",
+  "p_fall": "softmax(activity)[fall]",
+  "nodes_masked_share": 0.0039,
+  "runs": 3,
+  "summary": {
+    "recall": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "f1": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "specificity": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "accuracy": {
+      "mean": 0.5301,
+      "std": 0.0,
+      "min": 0.5301,
+      "max": 0.5301
+    },
+    "auroc": {
+      "mean": 0.4992,
+      "std": 0.0349,
+      "min": 0.4641,
+      "max": 0.5468
+    },
+    "tp": 0,
+    "fp": 0,
+    "tn": 1215,
+    "fn": 1077
+  }
+}

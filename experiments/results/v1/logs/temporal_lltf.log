@@ -1,0 +1,4 @@
+[temporal/lltf] seed 0 fold 0: recall 0.1337 precision 0.5106 f1 0.2119 auroc 0.5102 (55.3s)
+[temporal/lltf] seed 1 fold 0: recall 0.0167 precision 0.4615 f1 0.0322 auroc 0.4771 (42.7s)
+[temporal/lltf] seed 2 fold 0: recall 0.0557 precision 0.625 f1 0.1023 auroc 0.4895 (33.6s)
+{"recall": {"mean": 0.0687, "std": 0.0486, "min": 0.0167, "max": 0.1337}, "precision": {"mean": 0.5324, "std": 0.0685, "min": 0.4615, "max": 0.625}, "f1": {"mean": 0.1155, "std": 0.074, "min": 0.0322, "max": 0.2119}, "specificity": {"mean": 0.9465, "std": 0.0428, "min": 0.8864, "max": 0.9827}, "accuracy": {"mean": 0.534, "std": 0.0049, "min": 0.5288, "max": 0.5406}, "auroc": {"mean": 0.4923, "std": 0.0137, "min": 0.4771, "max": 0.5102}, "tp": 74, "fp": 65, "tn": 1150, "fn": 1003}

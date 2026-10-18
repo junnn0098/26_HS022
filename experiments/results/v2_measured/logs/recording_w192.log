@@ -1,0 +1,6 @@
+[v2/recording] seed 0 fold 0: recall 0.0 precision None f1 0.0 auroc 0.6478 (501.3s)
+[v2/recording] seed 0 fold 1: recall 0.0 precision None f1 0.0 auroc 0.3285 (457.9s)
+[v2/recording] seed 0 fold 2: recall 0.0 precision None f1 0.0 auroc 0.6379 (416.6s)
+[v2/recording] seed 0 fold 3: recall 0.0 precision None f1 0.0 auroc 0.5087 (293.7s)
+[v2/recording] seed 0 fold 4: recall 0.0 precision None f1 0.0 auroc 0.3594 (272.0s)
+{"recall": {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0}, "f1": {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0}, "specificity": {"mean": 1.0, "std": 0.0, "min": 1.0, "max": 1.0}, "accuracy": {"mean": 0.5642, "std": 0.0423, "min": 0.5133, "max": 0.6268}, "auroc": {"mean": 0.4965, "std": 0.1342, "min": 0.3285, "max": 0.6478}, "tp": 0, "fp": 0, "tn": 1248, "fn": 969}
