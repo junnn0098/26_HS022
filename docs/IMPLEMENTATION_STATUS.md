@@ -9,7 +9,7 @@
 | 1D-CNN 모델 | [`edge_ai/hanium_fall_v1/model.py`](../edge_ai/hanium_fall_v1/model.py) | `CSI1DCNN`, 134채널 × 500패킷 입력, 낙상/비낙상 2분류, 파라미터 65,762개 |
 | 팀 학습 가중치 | [`edge_ai/hanium_fall_v1/weights/`](../edge_ai/hanium_fall_v1/weights) | `team_v1_0717.pth`, `team_v1_0803.pth`. SHA-256은 [v1 설명서](../edge_ai/hanium_fall_v1/README.md)에 기록 |
 | 학습·평가·실시간 추론 | [`train.py`](../edge_ai/hanium_fall_v1/train.py), [`evaluate.py`](../edge_ai/hanium_fall_v1/evaluate.py), [`realtime_inference.py`](../edge_ai/hanium_fall_v1/realtime_inference.py) | 분할 방식 3가지(윈도우 무작위·녹화 단위·날짜 단위), 테스트 [`test_v1.py`](../edge_ai/tests/test_v1.py) |
-| 학습 데이터 | [`dataset/`](../dataset/README.md) | 녹화 48건(5일), 5초 윈도우 2,217개(낙상 969개), 동작 15종. 대용량 파일은 GitHub Release `dataset-v1.0` |
+| 학습 데이터 | [`dataset/`](../dataset/README.md) | 녹화 48건(3주간 5회), 500패킷 윈도우 2,217개(낙상 969개), 동작 15종. 대용량 파일은 GitHub Release `dataset-v1.0` |
 | 평가 결과 | [`experiments/MEASURED_RESULTS.md`](../experiments/MEASURED_RESULTS.md) | 분할 방식별 재현율·AUROC, 재현 명령, 윈도우별 예측 CSV |
 
 ## 입력 규격의 기준
@@ -18,7 +18,7 @@
 |---|---|---|
 | 수신률 | 설계서 p.5·10은 100Hz, p.21은 약 33pps | 실측 노드당 초당 약 37~50개(수집일별 중앙값, 모든 패킷 형식 포함). [`recordings.csv`](../dataset/metadata/recordings.csv)의 노드별 패킷 수(`nodes`) ÷ 녹화 시간, [수집 방법](../dataset/README.md#수집-방법). v2 `features.py`는 실제 수신 시각을 32Hz로 보간 |
 | 입력 크기 | 설계서 p.22는 52×500, p.26 및 보고서는 134×500, 설계서 p.21은 193×160 | v1: 134×500. v2: 노드별 193×160, 최대 4노드, 5초 창(`FeatureConfig`, `default_config.json`) |
-| 134채널 구성 | 보고서는 서브캐리어 진폭으로 설명 | 헤더 5바이트 + 첫 LLTF 블록 64 + 두 번째 64값 블록 + 1([채널 구성](../dataset/README.md#134채널의-실제-구성)). `--channels csi`·`lltf`로 헤더를 뺀 학습 가능 |
+| 134채널 구성 | 보고서는 서브캐리어 진폭으로 설명 | 헤더 10바이트로 만든 5채널 + 첫 LLTF 블록 64 + 두 번째 64값 블록 + 1([채널 구성](../dataset/README.md#134채널의-실제-구성)). `--channels csi`·`lltf`로 헤더를 뺀 학습 가능 |
 | LTF 선택 | 설계서 p.21의 그림은 LLTF, 본문은 HT-LTF | v1: LTF를 구분하지 않고 패킷 오프셋 10부터 134값을 읽음(위 행). v2: `adr018.py::extract_lltf_iq`가 첫 LLTF 64개 선택, 앞 2개 복소수 마스킹, 20MHz·PPDU 검사 |
 | 노드 융합 순서 | 설계서 p.21은 입력을 attention으로 먼저 합치는 것으로 읽힘 | v1: 4개 노드의 패킷을 도착 순서대로 한 시계열로 이어 붙임(노드 구분 없음). v2: 노드별 공유 1D-CNN 인코딩 후 attention 가중 융합 |
 | 모델 크기 | 보고서 약 8.7만 파라미터 | 같은 코드로 계산하면 v1 65,762개. v2는 359,697개(`python -m hanium_fall_v2.selftest`) |
@@ -67,7 +67,7 @@ v2 기본값의 출처: [설정](../edge_ai/config/default_config.json), [특징
 | p.19 초기 502개 클립: 재현율 1.0, 오탐 0건 | 07-08 녹화의 윈도우 502개 | 따로 재현하지 않음(아래 1,019개에 포함) |
 | p.15·19 1,019개 클립(낙상 302건, 11종 동작): 재현율 0.933, 비틀거림 오탐 0건 | 07-08·07-09 녹화의 윈도우 1,019개 | 같은 1,019개를 윈도우 무작위 80/20으로 나누면 재현율 0.997, 비틀거리기 오탐 0건 |
 
-보고서 수치는 윈도우를 무작위로 나눈 조건에서 나온 것으로 판단합니다. 2,217개 전체를 무작위로 나누면 CSI가 아닌 헤더 5채널만 넣어도 재현율 0.970이 나오고, 녹화 단위로 나누면 AUROC가 약 0.54로 떨어지며, 날짜 단위로 나누면 낙상을 거의 찾지 못합니다. 전체 표·해석·재현 명령은 [실측 데이터 검증 결과](../experiments/MEASURED_RESULTS.md)에 있습니다. 앞으로의 성능은 녹화 단위 이상으로 나눈 결과로 보고합니다([평가 절차](validation/EVALUATION_PROTOCOL.md)).
+보고서 수치는 윈도우를 무작위로 나눈 조건에서 나온 것으로 판단합니다. 2,217개 전체를 무작위로 나누면 CSI가 아닌 헤더 5채널만 넣어도 재현율 0.970이 나오고, 녹화 단위로 나누면 AUROC가 0.544로 떨어지며, 날짜 단위로 나누면 재현율이 0.033입니다. 실시간용 v2도 학습 데이터에는 맞지만 처음 보는 녹화에서는 AUROC 0.500입니다. 전체 표·해석·재현 명령은 [실측 데이터 검증 결과](../experiments/MEASURED_RESULTS.md)에 있습니다. 앞으로의 성능은 녹화 단위 이상으로 나눈 결과로 보고합니다([평가 절차](validation/EVALUATION_PROTOCOL.md)).
 
 ## 우선 보완할 구현 항목
 
@@ -81,7 +81,7 @@ v2 기본값의 출처: [설정](../edge_ai/config/default_config.json), [특징
 | 시연 입력과 실제 추론의 구분 | 해결 | `once`·`sequence`는 `source: scripted_demo`, `live-status`는 `jetson_orin`으로 보내고(`test_default_sources`), 서버는 `source`가 없으면 `unknown`으로 저장합니다. 앱은 `scripted_demo`에 '시연 입력' 칩을 붙이고, 시연 도구는 `--dart-define=DEMO_MODE=true`일 때만 보여 줍니다 |
 | 위치 공유 OFF가 WebSocket에 미적용 | 해결 | `publicLocation()`을 REST와 `WS /ws/location` 모두에 적용합니다(`test_websocket_respects_location_sharing_off`) |
 | 로그인 화면의 고정 계정값 | 해결 | 로그인 화면을 '시연용 역할 선택 (계정 인증 미구현)'으로 바꿨습니다(`widget_test.dart`). 계정 인증은 구현하지 않았습니다 |
-| 서버 API 보호 | 해결(선택 설정) | `HANIUM_API_TOKEN`을 설정하면 POST·상태 조회에 Bearer 토큰이 필요하고, JSON POST는 `Content-Type: application/json`이 아니면 415로 거절합니다. CORS 허용 목록, `HOST` 바인딩, 출입 비밀번호 저장 제거(`test_local_server.py`). 앱은 `--dart-define=API_TOKEN`으로 토큰을 보냅니다. `WS /ws/location`은 토큰 검사가 없습니다([서버 설정](../app/server/README.md)) |
+| 서버 API 보호 | 해결(선택 설정) | `HANIUM_API_TOKEN`을 설정하면 POST·상태 조회에 Bearer 토큰이 필요하고, JSON POST는 `Content-Type: application/json`이 아니면 415로 거절합니다. CORS 허용 목록, `HOST` 바인딩, 출입 비밀번호 저장 제거(`test_local_server.py`). 앱은 `--dart-define=API_TOKEN`으로 토큰을 보냅니다. `WS /ws/location`은 `?token=` 쿼리로 토큰을 확인하고 다른 출처의 연결을 거절합니다(`test_websocket_requires_token_and_known_origin`, [서버 설정](../app/server/README.md)) |
 | 도면 위치가 고정 설치 좌표 | 남음 | `--room-x`, `--room-y`로 지정한 방 위치입니다. 자동 위치 추정을 도입하면 위치 정답과 오차 평가를 추가합니다 |
 | 단순 JSON 경로의 `lying` → 위험 매핑 | 남음 | `LABEL_TO_EVENT`, `payload_from_ai_record`는 `lying`을 곧바로 `danger`로 매핑합니다(인식하지 못한 라벨은 `unknown`). 실제 모델 연결은 상태기계를 거치는 `live-status`를 사용합니다 |
 
@@ -106,7 +106,7 @@ v2 기본값의 출처: [설정](../edge_ai/config/default_config.json), [특징
 |---|---|
 | `python -m unittest discover -s tests` (`edge_ai/`, PyTorch 2.14 CPU) | 40개 모두 통과(v1 테스트 9개 포함) |
 | `python -m hanium_fall_v2.selftest` (`edge_ai/`) | `RESULT=PASS_COMPLETE_SELFTEST`, `TORCH_MODELS=PASS`, `fall_parameters=359697` |
-| `python -m unittest discover -s app/server/tests` (저장소 루트, Node.js 24) | 17개 모두 통과 |
+| `python -m unittest discover -s app/server/tests` (저장소 루트, Node.js 24) | 18개 모두 통과 |
 | `flutter test` (`app/`) | 11개 모두 통과 |
 
-위 점검은 실제 센서·앱 단말·FCM 수신을 포함하지 않습니다. 합성 입력으로 한 소프트웨어 검사는 [소프트웨어 실험 결과](../experiments/RESULTS.md), 실행 절차는 [실행 및 시연 안내](RUNBOOK.md)에 있습니다.
+위 점검은 실제 센서·앱 단말·FCM 수신을 포함하지 않습니다. 합성 입력으로 한 소프트웨어 검사는 [합성 입력 기반 소프트웨어 검증 결과](../experiments/RESULTS.md), 실행 절차는 [실행 및 시연 안내](RUNBOOK.md)에 있습니다.

@@ -46,7 +46,10 @@ flutter run --dart-define=SERVER_URL=http://<서버 IP>:8000 --dart-define=DEMO_
 | `source: scripted_demo` | '시연 입력' 칩 |
 | `source: admin` | '관리자 수동 입력' |
 | `source: app-demo`·`scenario` (앱 시연 버튼, `/scenario` 기본값) | '앱 시연 데이터' |
-| `source: mock`·`boot`·`reset` (서버 모의 이동, 시작·초기화 직후) | '시연용 mock 데이터' |
+| `source: mock` (서버 모의 이동) | '시연용 mock 데이터' |
+| `source: boot`·`reset` (서버 시작·시연 초기화 직후, 상태는 `unknown`) | '입력 대기' |
+| `source: unknown` 또는 출처 없음 | '출처 미지정' |
+| `source: cache` | '앱에 저장된 마지막 상태' |
 
 ## 테스트
 

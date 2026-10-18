@@ -31,7 +31,7 @@ REAL_SENSOR_ONLY=true node app/server/local_server.js
 | 환경 변수 | 기본값 | 의미 |
 |---|---|---|
 | `HOST` | `0.0.0.0` | 실제 휴대폰·Jetson 시연을 위해 모든 인터페이스에서 받으며 시작 시 경고를 출력합니다. 같은 PC(에뮬레이터 포함)만 쓸 때는 `127.0.0.1` |
-| `HANIUM_API_TOKEN` | 없음 | 설정하면 모든 POST와 상태 조회 GET(`/state`, `/emergency-info`, `/guardians`, `/alerts`, `/settings`, `/location/latest`)에 `Authorization: Bearer <토큰>`이 필요합니다. `jetson_edge_client.py`·`demo_sensor_client.py`는 같은 환경 변수가 있으면 토큰을 보내고, 관리자 화면은 처음 한 번 토큰을 묻습니다. Flutter 앱은 `--dart-define=API_TOKEN=<같은 토큰>`으로 실행하면 같은 헤더를 보냅니다. `/`, `/health`, `/push/status`, `/sensor/schema`, `/sensor/test-command`, `/admin` 화면 자체와 `WS /ws/location`은 토큰 없이 열려 있습니다(WebSocket 위치도 위치 공유 OFF 필터는 적용) |
+| `HANIUM_API_TOKEN` | 없음 | 설정하면 모든 POST와 상태 조회 GET(`/state`, `/emergency-info`, `/guardians`, `/alerts`, `/settings`, `/location/latest`)에 `Authorization: Bearer <토큰>`이 필요합니다. `jetson_edge_client.py`·`demo_sensor_client.py`는 같은 환경 변수가 있으면 토큰을 보내고, 관리자 화면은 처음 한 번 토큰을 묻습니다. Flutter 앱은 `--dart-define=API_TOKEN=<같은 토큰>`으로 실행하면 같은 헤더를 보냅니다. `WS /ws/location`은 브라우저가 헤더를 붙일 수 없어 `?token=<토큰>` 쿼리로 확인하며(앱·관리자 화면은 자동으로 붙임), 다른 출처의 웹페이지에서 여는 연결은 `HANIUM_CORS_ORIGIN`에 없으면 거절합니다. `/`, `/health`, `/push/status`, `/sensor/schema`, `/sensor/test-command`, `/admin` 화면 자체는 토큰 없이 열려 있습니다 |
 | `HANIUM_CORS_ORIGIN` | 없음 | 기본은 같은 출처(관리자 화면)만 허용합니다. 다른 출처의 브라우저 앱을 쓸 때 쉼표로 구분해 지정합니다(예: `http://localhost:5000`) |
 | `REAL_SENSOR_ONLY` | `false` | `true`이면 자동 모의 이동을 끕니다 |
 

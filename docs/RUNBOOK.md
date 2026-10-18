@@ -30,8 +30,20 @@ flutter test
 ```
 
 - 평가 명령은 [`dataset/sample`](../dataset/sample)의 윈도우 15개(라벨마다 1개)에 팀 가중치를 적용해 전체·수집일별·동작별 지표를 JSON으로 출력합니다. 샘플 대부분(07-08~07-15)은 이 가중치를 학습한 수집일의 데이터이므로 출력 수치는 실행 확인용이며 성능이 아닙니다. 성능은 [실측 데이터 검증 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
-- `edge_ai` 단위 테스트는 PyTorch가 설치된 환경에서 실행합니다(v1 테스트가 모델 코드를 불러옴).
+- `edge_ai` 단위 테스트는 PyTorch가 없으면 모델·실시간·분할 테스트를 건너뜁니다.
+- Windows에서 `flutter test`를 처음 실행할 때 개발자 모드(심볼릭 링크 허용)를 요구할 수 있습니다. 확인한 환경은 Flutter 3.47.2입니다.
 - 서버 테스트는 Node.js가 필요하며, 서버를 임시 폴더에 복사해 띄우고 끝나면 종료하므로 `app/server/dev_state.json`을 건드리지 않습니다.
+
+### 녹화 재생으로 v1 실시간 추론 확인
+
+센서 노드 대신 저장소의 07-08 낙상 녹화 12초를 UDP로 재생해, 실시간 경로가 패킷을 받아 0.5초마다 낙상 확률을 계산하는지 봅니다. 두 터미널에서 `edge_ai/` 기준으로 실행합니다.
+
+```bash
+python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --host 127.0.0.1
+python -m hanium_fall_v1.replay_recording ../dataset/sample/raw/csi-1783443615.fall-12s.csi.jsonl.gz
+```
+
+v1 실시간 스크립트는 결과를 콘솔에만 출력하며 앱 서버로 보내지 않습니다. 이 녹화는 팀 가중치의 학습 날짜에 속하므로 동작 확인용입니다.
 
 ## 1. 센서 없이 화면과 통신 흐름 확인
 
@@ -178,7 +190,7 @@ python dataset/tools/download.py --v2       # NPZ + v2 형식 세션 -> dataset/
 python dataset/tools/download.py --raw      # NPZ + 원본 CSI·관절 좌표 녹화 -> dataset/raw/
 ```
 
-GitHub Release `dataset-v1.0`에서 받아 [`SHA256SUMS`](../dataset/SHA256SUMS)로 확인하고, 이미 받은 파일은 다시 받지 않습니다. 압축 파일은 받은 폴더에 풉니다. `--raw` 압축 해제는 `tarfile`의 `filter` 인자를 쓰므로 Python 3.12 이상(3.10은 3.10.12, 3.11은 3.11.4 이상)이 필요합니다. 파일 구성과 용량은 [데이터셋 설명](../dataset/README.md#파일-구성과-내려받기)에 있습니다.
+GitHub Release `dataset-v1.0`에서 받아 [`SHA256SUMS`](../dataset/SHA256SUMS)로 확인하고, 이미 받은 파일은 다시 받지 않습니다. 압축 파일은 받은 폴더에 풉니다. 압축 해제는 Python 3.10 이상에서 동작하며, 파일 경로가 받은 폴더 밖을 가리키는 항목은 거부합니다. 파일 구성과 용량은 [데이터셋 설명](../dataset/README.md#파일-구성과-내려받기)에 있습니다.
 
 ### 결과 재현
 
