@@ -27,7 +27,7 @@ ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)으�
 ## 점검
 
 ```bash
-pip install -r requirements.txt torch
+python -m pip install -r requirements.txt torch
 python -m hanium_fall_v2.selftest         # 파서·특징·상태기계 자체 점검
 python -m unittest discover -s tests      # 단위 테스트 (torch가 없으면 모델 테스트는 건너뜀)
 ```
@@ -35,8 +35,7 @@ python -m unittest discover -s tests      # 단위 테스트 (torch가 없으면
 ## v1 실행
 
 ```bash
-python -m hanium_fall_v1.evaluate --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all \
-    --npz-dir ../dataset/sample --metadata ../dataset/sample/sample_windows.csv
+python -m hanium_fall_v1.evaluate --weights hanium_fall_v1/weights/team_v1_0717.pth --npz-dir ../dataset/sample --metadata ../dataset/sample/sample_windows.csv
 python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all
 ```
 

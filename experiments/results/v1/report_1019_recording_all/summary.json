@@ -11,7 +11,13 @@
   "optimizer": "Adam(wd=1e-4) + cosine",
   "threshold": 0.5,
   "parameters": 65762,
-  "metadata_sha256": "2de39b2d116898ca371fe48158da6f6a3c894c3c41009e111877be37f1cbf823",
+  "metadata_sha256": "08bf5795713c86b261a12804f1cf73491995f3c499109ba3a26f73412902a4f8",
+  "threads": 2,
+  "environment": {
+    "python": "3.13.15",
+    "numpy": "2.5.3",
+    "torch": "2.14.1+cpu"
+  },
   "runs": 5,
   "summary": {
     "recall": {
@@ -19,6 +25,14 @@
       "std": 0.3343,
       "min": 0.0,
       "max": 0.873
+    },
+    "runs_with_value": {
+      "recall": 5,
+      "precision": 5,
+      "f1": 5,
+      "specificity": 5,
+      "accuracy": 5,
+      "auroc": 5
     },
     "precision": {
       "mean": 0.42,

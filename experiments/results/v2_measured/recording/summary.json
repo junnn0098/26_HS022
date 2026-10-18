@@ -1,53 +1,78 @@
 {
   "protocol": "recording",
   "pipeline": "v2 features + MultiNodeFallModel",
-  "epochs": 25,
+  "packet_widths": "all",
+  "epochs": 60,
   "threshold": 0.5,
-  "loss": "weighted CE(10 activities) + 0.4 CE(count) + 0.1 MSE(quality)",
-  "optimizer": "AdamW 1e-3 + cosine",
+  "loss": "CE(10 activities, label smoothing 0.03) + 0.4 CE(count) + 0.1 MSE(quality)",
+  "optimizer": "AdamW 1e-3 + cosine, grad-norm clip 5",
+  "augmentation": "hanium_fall_v2 dataset augmentation",
+  "window": "ts_start_utc + 5 s (v2 uses a fixed time span, v1 uses 500 packets)",
   "p_fall": "softmax(activity)[fall]",
   "nodes_masked_share": 0.0039,
   "runs": 5,
   "summary": {
     "recall": {
-      "mean": 0.001,
-      "std": 0.002,
-      "min": 0.0,
-      "max": 0.005
+      "mean": 0.4609,
+      "std": 0.0525,
+      "min": 0.3869,
+      "max": 0.5294
+    },
+    "runs_with_value": {
+      "recall": 5,
+      "precision": 5,
+      "f1": 5,
+      "specificity": 5,
+      "accuracy": 5,
+      "auroc": 5
     },
     "precision": {
-      "mean": 0.0909,
-      "std": 0.0,
-      "min": 0.0909,
-      "max": 0.0909
+      "mean": 0.4259,
+      "std": 0.0766,
+      "min": 0.3194,
+      "max": 0.5355
     },
     "f1": {
-      "mean": 0.0019,
-      "std": 0.0038,
-      "min": 0.0,
-      "max": 0.0095
+      "mean": 0.4381,
+      "std": 0.051,
+      "min": 0.3733,
+      "max": 0.5226
     },
     "specificity": {
-      "mean": 0.9907,
-      "std": 0.0185,
-      "min": 0.9537,
-      "max": 1.0
+      "mean": 0.506,
+      "std": 0.12,
+      "min": 0.3115,
+      "max": 0.678
     },
     "accuracy": {
-      "mean": 0.5599,
-      "std": 0.0474,
-      "min": 0.4988,
-      "max": 0.6268
+      "mean": 0.4833,
+      "std": 0.0778,
+      "min": 0.3691,
+      "max": 0.6075
     },
     "auroc": {
-      "mean": 0.47,
-      "std": 0.1096,
-      "min": 0.3105,
-      "max": 0.6005
+      "mean": 0.4999,
+      "std": 0.0964,
+      "min": 0.3519,
+      "max": 0.6459
     },
-    "tp": 1,
-    "fp": 10,
-    "tn": 1238,
-    "fn": 968
+    "tp": 442,
+    "fp": 616,
+    "tn": 632,
+    "fn": 527
+  },
+  "train_fit": {
+    "train_recall": {
+      "mean": 0.828,
+      "std": 0.1469,
+      "min": 0.5508,
+      "max": 0.9398
+    },
+    "train_auroc": {
+      "mean": 0.89,
+      "std": 0.1057,
+      "min": 0.6908,
+      "max": 0.9752
+    }
   }
 }

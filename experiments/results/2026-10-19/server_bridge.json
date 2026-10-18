@@ -1,12 +1,12 @@
 {
   "scope": "Synthetic loopback HTTP only; no actual CSI, trained model, Flutter device or FCM.",
-  "executed_at": "2026-10-19T05:14:56+09:00",
+  "executed_at": "2026-10-19T06:18:21+09:00",
   "python": "3.13.15",
   "platform": "Windows",
   "node_version": "v24.18.0",
   "hash_method": "SHA-256 of file content with CRLF normalised to LF; POSIX paths from the repository root",
   "source_sha256": {
-    "app/server/local_server.js": "58fb777fcce1490cdaa92c10f81e618e5cfdb51971d9ed8aedf2ce51cbc352ec",
+    "app/server/local_server.js": "bbeb3d5a43f30826ca8da297c87209f254822d84a8e68b9f2a6112f0b8b7023c",
     "app/server/package.json": "a8d372ec01c859e3a794ffaaf3187556685317bdeed02ec4d932ba566cecb40d",
     "app/server/jetson_edge_client.py": "35caed6e39cac9e131d22f97d9d828b29f7c65d242308ee74d6afbe8a2bb5a92",
     "experiments/check_server_bridge.py": "79bc3706400886bc18f0fe37715c01cb7c09d5658d5ac99ca065764c0b6e2d64"

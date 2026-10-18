@@ -1,5 +1,6 @@
 {
   "protocol": "recording",
+  "batches": "all",
   "channels": "all",
   "epochs": 25,
   "lr": 0.001,
@@ -8,48 +9,62 @@
   "optimizer": "Adam(wd=1e-4) + cosine",
   "threshold": 0.5,
   "parameters": 65762,
-  "metadata_sha256": "509bb84ab143bc548d14c31e732926053b77807c5f7238cf021ab81f39410cf9",
+  "metadata_sha256": "08bf5795713c86b261a12804f1cf73491995f3c499109ba3a26f73412902a4f8",
+  "threads": 2,
+  "environment": {
+    "python": "3.13.15",
+    "numpy": "2.5.3",
+    "torch": "2.14.1+cpu"
+  },
   "runs": 5,
   "summary": {
     "recall": {
-      "mean": 0.5521,
-      "std": 0.1185,
-      "min": 0.392,
-      "max": 0.6631
+      "mean": 0.5532,
+      "std": 0.1173,
+      "min": 0.4052,
+      "max": 0.6791
+    },
+    "runs_with_value": {
+      "recall": 5,
+      "precision": 5,
+      "f1": 5,
+      "specificity": 5,
+      "accuracy": 5,
+      "auroc": 5
     },
     "precision": {
-      "mean": 0.4612,
-      "std": 0.113,
-      "min": 0.2928,
-      "max": 0.6215
+      "mean": 0.4809,
+      "std": 0.1277,
+      "min": 0.2952,
+      "max": 0.6711
     },
     "f1": {
-      "mean": 0.4974,
-      "std": 0.1064,
-      "min": 0.3467,
-      "max": 0.638
+      "mean": 0.5087,
+      "std": 0.111,
+      "min": 0.3416,
+      "max": 0.6523
     },
     "specificity": {
-      "mean": 0.4961,
-      "std": 0.1235,
-      "min": 0.3154,
-      "max": 0.6215
+      "mean": 0.5282,
+      "std": 0.1375,
+      "min": 0.3308,
+      "max": 0.7052
     },
     "accuracy": {
-      "mean": 0.5179,
-      "std": 0.0939,
-      "min": 0.4024,
-      "max": 0.638
+      "mean": 0.5364,
+      "std": 0.0995,
+      "min": 0.4171,
+      "max": 0.6708
     },
     "auroc": {
-      "mean": 0.5425,
-      "std": 0.1179,
-      "min": 0.4049,
-      "max": 0.6931
+      "mean": 0.5439,
+      "std": 0.1299,
+      "min": 0.4203,
+      "max": 0.7171
     },
-    "tp": 543,
-    "fp": 631,
-    "tn": 617,
-    "fn": 426
+    "tp": 544,
+    "fp": 590,
+    "tn": 658,
+    "fn": 425
   }
 }

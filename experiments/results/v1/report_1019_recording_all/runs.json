@@ -17,7 +17,7 @@
   "fold": 0,
   "train_windows": 780,
   "test_recordings": 4,
-  "seconds": 53.5,
+  "seconds": 25.5,
   "loss_history": [
    0.4529,
    0.22842,
@@ -90,7 +90,7 @@
   "fold": 1,
   "train_windows": 787,
   "test_recordings": 4,
-  "seconds": 39.7,
+  "seconds": 24.9,
   "loss_history": [
    0.38421,
    0.09981,
@@ -163,7 +163,7 @@
   "fold": 2,
   "train_windows": 834,
   "test_recordings": 3,
-  "seconds": 42.9,
+  "seconds": 26.5,
   "loss_history": [
    0.49787,
    0.31216,
@@ -230,7 +230,7 @@
   "fold": 3,
   "train_windows": 836,
   "test_recordings": 3,
-  "seconds": 56.3,
+  "seconds": 24.7,
   "loss_history": [
    0.46995,
    0.28779,
@@ -297,7 +297,7 @@
   "fold": 4,
   "train_windows": 839,
   "test_recordings": 3,
-  "seconds": 45.9,
+  "seconds": 25.9,
   "loss_history": [
    0.33004,
    0.13575,

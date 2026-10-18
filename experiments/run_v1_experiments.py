@@ -47,6 +47,10 @@ def main() -> None:
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--only", nargs="*", help="subset of run names")
     args = parser.parse_args()
+    known = set(TRAINING_RUNS) | set(TEAM_WEIGHTS) | {"team_v1_0717_later"}
+    unknown = sorted(set(args.only or []) - known)
+    if unknown:
+        parser.error(f"unknown run names: {', '.join(unknown)} (choose from {', '.join(sorted(known))})")
 
     jobs = []
     for name, (protocol, channels, seeds, *batches) in TRAINING_RUNS.items():
@@ -61,6 +65,12 @@ def main() -> None:
             continue
         jobs.append((name, [sys.executable, "-m", "hanium_fall_v1.evaluate", "--weights", str(WEIGHTS / weights),
                             "--channels", "all", "--out", str(OUT / f"{name}.json")]))
+    if not args.only or "team_v1_0717_later" in args.only:
+        # 07-17 weights on the two later collection days only (made before those days existed)
+        jobs.append(("team_v1_0717_later", [sys.executable, "-m", "hanium_fall_v1.evaluate", "--weights",
+                                            str(WEIGHTS / TEAM_WEIGHTS["team_v1_0717"]), "--channels", "all",
+                                            "--batches", "b3_0724", "b4_0728",
+                                            "--out", str(OUT / "team_v1_0717_later.json")]))
 
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         codes = dict(zip([n for n, _ in jobs], pool.map(lambda job: run(job[1], OUT / "logs" / f"{job[0]}.log"), jobs)))

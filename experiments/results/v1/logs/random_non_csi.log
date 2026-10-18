@@ -1,6 +1,6 @@
-[random/non_csi] seed 0 fold 0: recall 0.9845 precision 0.8884 f1 0.934 auroc 0.9897 (79.9s)
-[random/non_csi] seed 1 fold 0: recall 0.9639 precision 0.9541 f1 0.959 auroc 0.9936 (73.9s)
-[random/non_csi] seed 2 fold 0: recall 0.9845 precision 0.9363 f1 0.9598 auroc 0.9945 (81.4s)
-[random/non_csi] seed 3 fold 0: recall 0.9691 precision 0.9353 f1 0.9519 auroc 0.9932 (73.6s)
-[random/non_csi] seed 4 fold 0: recall 0.9485 precision 0.9064 f1 0.927 auroc 0.9874 (73.0s)
-{"recall": {"mean": 0.9701, "std": 0.0136, "min": 0.9485, "max": 0.9845}, "precision": {"mean": 0.9241, "std": 0.0235, "min": 0.8884, "max": 0.9541}, "f1": {"mean": 0.9463, "std": 0.0134, "min": 0.927, "max": 0.9598}, "specificity": {"mean": 0.9371, "std": 0.0213, "min": 0.9032, "max": 0.9637}, "accuracy": {"mean": 0.9516, "std": 0.0125, "min": 0.9344, "max": 0.9638}, "auroc": {"mean": 0.9917, "std": 0.0027, "min": 0.9874, "max": 0.9945}, "tp": 941, "fp": 78, "tn": 1162, "fn": 29}
+[random/non_csi] seed 0 fold 0: recall 0.9845 precision 0.8884 f1 0.934 auroc 0.9916 (56.4s)
+[random/non_csi] seed 1 fold 0: recall 0.9639 precision 0.935 f1 0.9492 auroc 0.9947 (53.6s)
+[random/non_csi] seed 2 fold 0: recall 0.9794 precision 0.9314 f1 0.9548 auroc 0.9932 (53.7s)
+[random/non_csi] seed 3 fold 0: recall 0.9691 precision 0.9353 f1 0.9519 auroc 0.9934 (53.0s)
+[random/non_csi] seed 4 fold 0: recall 0.9536 precision 0.9024 f1 0.9273 auroc 0.9866 (53.3s)
+{"recall": {"mean": 0.9701, "std": 0.011, "min": 0.9536, "max": 0.9845}, "runs_with_value": {"recall": 5, "precision": 5, "f1": 5, "specificity": 5, "accuracy": 5, "auroc": 5}, "precision": {"mean": 0.9185, "std": 0.0194, "min": 0.8884, "max": 0.9353}, "f1": {"mean": 0.9434, "std": 0.0108, "min": 0.9273, "max": 0.9548}, "specificity": {"mean": 0.9323, "std": 0.0179, "min": 0.9032, "max": 0.9476}, "accuracy": {"mean": 0.9489, "std": 0.0102, "min": 0.9344, "max": 0.9593}, "auroc": {"mean": 0.9919, "std": 0.0028, "min": 0.9866, "max": 0.9947}, "tp": 941, "fp": 84, "tn": 1156, "fn": 29}

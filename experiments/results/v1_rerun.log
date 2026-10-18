@@ -1,0 +1,12 @@
+report_1019_random_all: ok
+report_1019_recording_all: ok
+random_all: ok
+random_non_csi: ok
+recording_all: ok
+recording_lltf: ok
+temporal_all: ok
+temporal_csi: ok
+temporal_lltf: ok
+team_v1_0717: ok
+team_v1_0803: ok
+team_v1_0717_later: ok

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from collections import Counter
@@ -23,8 +24,13 @@ CATEGORY = {"daily": ("일상 동작", "#2a78d6"), "confusing": ("혼동 동작"
 BATCH_NAME = {"b1_0708_0709": "07-08·07-09\n(1·2차)", "b2_0715": "07-15\n(낙상 보강)",
               "b3_0724": "07-24\n(3차)", "b4_0728": "07-28\n(4차)"}
 
+KOREAN_FONTS = ["Malgun Gothic", "AppleGothic", "NanumGothic", "Noto Sans CJK KR", "Noto Sans KR"]
+_installed = {font.name for font in matplotlib.font_manager.fontManager.ttflist}
+if not _installed.intersection(KOREAN_FONTS):
+    print("warning: no Korean font found; install Noto Sans CJK KR or NanumGothic for readable labels")
+
 plt.rcParams.update({
-    "font.family": "Malgun Gothic", "axes.unicode_minus": False, "figure.facecolor": SURFACE,
+    "font.family": "sans-serif", "font.sans-serif": KOREAN_FONTS + ["DejaVu Sans"], "axes.unicode_minus": False, "figure.facecolor": SURFACE,
     "axes.facecolor": SURFACE, "axes.edgecolor": GRID, "axes.labelcolor": INK_2, "xtick.color": INK_2,
     "ytick.color": INK_2, "text.color": INK, "font.size": 10, "savefig.dpi": 160, "savefig.bbox": "tight",
 })
@@ -70,8 +76,7 @@ def protocol_comparison(out: Path) -> None:
     def summary(path: str) -> dict:
         return json.loads((results / path / "summary.json").read_text(encoding="utf-8"))["summary"]
 
-    team = json.loads((results / "v1" / "team_v1_0717.json").read_text(encoding="utf-8"))
-    later = {key: sum(team["by_batch"][b][key] for b in ("b3_0724", "b4_0728")) for key in ("tp", "fn")}
+    later = json.loads((results / "v1" / "team_v1_0717_later.json").read_text(encoding="utf-8"))["overall"]
     rows = [
         ("v1\n윈도우 무작위 분할", summary("v1/random_all")),
         ("v1\n헤더 5채널만 입력\n(누수 점검)", summary("v1/random_non_csi")),
@@ -82,8 +87,7 @@ def protocol_comparison(out: Path) -> None:
     ]
     names = [name for name, _ in rows] + ["팀 가중치(07-17)\n이후 수집일에 적용"]
     recall = [m["recall"]["mean"] for _, m in rows] + [later["tp"] / (later["tp"] + later["fn"])]
-    auroc = [m["auroc"]["mean"] for _, m in rows] + [
-        float(np.mean([team["by_batch"][b]["auroc"] for b in ("b3_0724", "b4_0728")]))]
+    auroc = [m["auroc"]["mean"] for _, m in rows] + [later["auroc"]]
     x = np.arange(len(names))
     fig, ax = plt.subplots(figsize=(11, 4.0))
     ax.bar(x - 0.19, recall, width=0.36, color="#2a78d6", label="낙상 재현율 (임계값 0.5)", edgecolor=SURFACE, linewidth=2)
@@ -109,6 +113,7 @@ def protocol_comparison(out: Path) -> None:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__).parse_args()
     rows = windows()
     figures = ROOT / "dataset" / "figures"
     figures.mkdir(parents=True, exist_ok=True)

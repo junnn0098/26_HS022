@@ -1,5 +1,6 @@
 {
   "protocol": "temporal",
+  "batches": "all",
   "channels": "lltf",
   "epochs": 25,
   "lr": 0.001,
@@ -8,48 +9,62 @@
   "optimizer": "Adam(wd=1e-4) + cosine",
   "threshold": 0.5,
   "parameters": 65762,
-  "metadata_sha256": "2de39b2d116898ca371fe48158da6f6a3c894c3c41009e111877be37f1cbf823",
+  "metadata_sha256": "08bf5795713c86b261a12804f1cf73491995f3c499109ba3a26f73412902a4f8",
+  "threads": 2,
+  "environment": {
+    "python": "3.13.15",
+    "numpy": "2.5.3",
+    "torch": "2.14.1+cpu"
+  },
   "runs": 3,
   "summary": {
     "recall": {
-      "mean": 0.0687,
-      "std": 0.0486,
+      "mean": 0.0613,
+      "std": 0.0389,
       "min": 0.0167,
-      "max": 0.1337
+      "max": 0.1114
+    },
+    "runs_with_value": {
+      "recall": 3,
+      "precision": 3,
+      "f1": 3,
+      "specificity": 3,
+      "accuracy": 3,
+      "auroc": 3
     },
     "precision": {
-      "mean": 0.5324,
-      "std": 0.0685,
-      "min": 0.4615,
-      "max": 0.625
+      "mean": 0.6099,
+      "std": 0.0876,
+      "min": 0.5,
+      "max": 0.7143
     },
     "f1": {
-      "mean": 0.1155,
-      "std": 0.074,
-      "min": 0.0322,
-      "max": 0.2119
+      "mean": 0.1081,
+      "std": 0.0639,
+      "min": 0.0323,
+      "max": 0.1887
     },
     "specificity": {
-      "mean": 0.9465,
-      "std": 0.0428,
-      "min": 0.8864,
-      "max": 0.9827
+      "mean": 0.9679,
+      "std": 0.021,
+      "min": 0.9383,
+      "max": 0.9852
     },
     "accuracy": {
-      "mean": 0.534,
-      "std": 0.0049,
-      "min": 0.5288,
-      "max": 0.5406
+      "mean": 0.5419,
+      "std": 0.0085,
+      "min": 0.5301,
+      "max": 0.5497
     },
     "auroc": {
-      "mean": 0.4923,
-      "std": 0.0137,
-      "min": 0.4771,
-      "max": 0.5102
+      "mean": 0.4936,
+      "std": 0.0147,
+      "min": 0.4784,
+      "max": 0.5135
     },
-    "tp": 74,
-    "fp": 65,
-    "tn": 1150,
-    "fn": 1003
+    "tp": 66,
+    "fp": 39,
+    "tn": 1176,
+    "fn": 1011
   }
 }

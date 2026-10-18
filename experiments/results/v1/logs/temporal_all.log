@@ -1,4 +1,4 @@
-[temporal/all] seed 0 fold 0: recall 0.0 precision None f1 0.0 auroc 0.7458 (62.4s)
-[temporal/all] seed 1 fold 0: recall 0.1588 precision 0.9661 f1 0.2728 auroc 0.7031 (54.7s)
-[temporal/all] seed 2 fold 0: recall 0.0 precision None f1 0.0 auroc 0.6856 (64.5s)
-{"recall": {"mean": 0.0529, "std": 0.0749, "min": 0.0, "max": 0.1588}, "precision": {"mean": 0.9661, "std": 0.0, "min": 0.9661, "max": 0.9661}, "f1": {"mean": 0.0909, "std": 0.1286, "min": 0.0, "max": 0.2728}, "specificity": {"mean": 0.9984, "std": 0.0023, "min": 0.9951, "max": 1.0}, "accuracy": {"mean": 0.5541, "std": 0.0339, "min": 0.5301, "max": 0.6021}, "auroc": {"mean": 0.7115, "std": 0.0253, "min": 0.6856, "max": 0.7458}, "tp": 57, "fp": 2, "tn": 1213, "fn": 1020}
+[temporal/all] seed 0 fold 0: recall 0.0 precision None f1 0.0 auroc 0.7403 (46.2s)
+[temporal/all] seed 1 fold 0: recall 0.0975 precision 1.0 f1 0.1777 auroc 0.7068 (45.6s)
+[temporal/all] seed 2 fold 0: recall 0.0 precision None f1 0.0 auroc 0.6779 (44.8s)
+{"recall": {"mean": 0.0325, "std": 0.046, "min": 0.0, "max": 0.0975}, "runs_with_value": {"recall": 3, "precision": 1, "f1": 3, "specificity": 3, "accuracy": 3, "auroc": 3}, "precision": {"mean": 1.0, "std": 0.0, "min": 1.0, "max": 1.0}, "f1": {"mean": 0.0592, "std": 0.0838, "min": 0.0, "max": 0.1777}, "specificity": {"mean": 1.0, "std": 0.0, "min": 1.0, "max": 1.0}, "accuracy": {"mean": 0.5454, "std": 0.0216, "min": 0.5301, "max": 0.5759}, "auroc": {"mean": 0.7083, "std": 0.0255, "min": 0.6779, "max": 0.7403}, "tp": 35, "fp": 0, "tn": 1215, "fn": 1042}
