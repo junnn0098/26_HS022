@@ -1,0 +1,30 @@
+[
+  {
+    "noise_std_iq_units": 0.0,
+    "trials": 15,
+    "returned": 15,
+    "mae_bpm": 0.041304939298823305,
+    "max_error_bpm": 0.0725579233353173
+  },
+  {
+    "noise_std_iq_units": 0.7,
+    "trials": 15,
+    "returned": 15,
+    "mae_bpm": 0.04042841137282712,
+    "max_error_bpm": 0.07185474070618092
+  },
+  {
+    "noise_std_iq_units": 3.0,
+    "trials": 15,
+    "returned": 15,
+    "mae_bpm": 0.03863515122179475,
+    "max_error_bpm": 0.08389157170284633
+  },
+  {
+    "noise_std_iq_units": 8.0,
+    "trials": 15,
+    "returned": 15,
+    "mae_bpm": 0.04490925352998705,
+    "max_error_bpm": 0.08616634751208885
+  }
+]

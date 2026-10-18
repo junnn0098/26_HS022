@@ -1,0 +1,72 @@
+{
+  "executed_at_utc": "2026-10-18T07:40:20.114837+00:00",
+  "checkout_commit": "b3bc7e473e36cc67b53d734c8a9c5d6c860d395c",
+  "python": "3.12.14",
+  "platform": "Linux",
+  "machine": "x86_64",
+  "dependencies": {
+    "numpy": "2.3.5",
+    "matplotlib": "3.10.8"
+  },
+  "configs": {
+    "feature": {
+      "subcarriers": 64,
+      "sample_rate_hz": 32,
+      "window_seconds": 5.0,
+      "max_nodes": 4,
+      "min_node_quality": 0.25
+    },
+    "runtime": {
+      "inference_interval_seconds": 0.5,
+      "min_quality": 0.55,
+      "min_activity_confidence": 0.55,
+      "fall_candidate_probability": 0.7,
+      "fall_candidate_hits": 2,
+      "post_fall_timeout_seconds": 8.0,
+      "post_fall_lying_probability": 0.55,
+      "post_fall_lying_hits": 3,
+      "recovery_probability": 0.65,
+      "recovery_hits": 2,
+      "confirmed_hold_seconds": 30.0
+    },
+    "health": {
+      "enabled": true,
+      "respiratory_sample_rate_hz": 10,
+      "respiratory_window_seconds": 60.0,
+      "respiratory_min_history_seconds": 30.0,
+      "respiratory_min_bpm": 6.0,
+      "respiratory_max_bpm": 30.0,
+      "respiratory_min_confidence": 0.45,
+      "respiratory_min_nodes": 2,
+      "respiratory_max_motion_score": 0.7,
+      "apnea_enabled": true,
+      "apnea_min_seconds": 10.0,
+      "apnea_recent_window_seconds": 12.0,
+      "apnea_amplitude_ratio": 0.3,
+      "apnea_baseline_updates": 3,
+      "assumed_people_when_model_unavailable": 1,
+      "cough_enabled": true,
+      "cough_candidate_min_nodes": 2,
+      "cough_candidate_z": 6.0,
+      "cough_coincidence_seconds": 0.35,
+      "cough_refractory_seconds": 1.0,
+      "cough_baseline_seconds": 20.0,
+      "cough_min_baseline_samples": 40,
+      "cough_confirm_probability": 0.8
+    }
+  },
+  "seeds": [
+    7,
+    19,
+    42
+  ],
+  "input_sha256": {
+    "edge_ai/hanium_fall_v2/config.py": "b083c6d284c55c792c4274c5b513333b8364af4d2126912c018002caeb86aebb",
+    "edge_ai/hanium_fall_v2/fall_state.py": "cc295fd8f4a8dcd2f70d34d2729c2498e275b8637d31a4202129df4f21ca5511",
+    "edge_ai/hanium_fall_v2/features.py": "0c8d2ab4e7c3a9c456f2301994c86166fd1c8943e9942b2a65d58ec9f663d323",
+    "edge_ai/hanium_fall_v2/respiratory.py": "4b27a5e36026dbe1d1dbbb36679738e6cb650842d82932c7f32164bcf6e7251a",
+    "experiments/run_experiments.py": "1303fbec288881fe89f0384efdcb3427303b443d2d7cecc24b91c3c509324d8e",
+    "experiments/fall_scenarios.json": "6cf2bf92abde0b89476682c9f6b0882d74d123aad21668c2c9eb5017b7e49be5"
+  },
+  "scope": "Synthetic software experiments only. No trained weights, human measurements, ESP32, Jetson, Flutter or FCM."
+}

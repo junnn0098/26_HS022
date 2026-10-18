@@ -1,0 +1,102 @@
+[
+  {
+    "scenario": "normal",
+    "final_state": "normal",
+    "any_alarm": false,
+    "first_alarm_s": null,
+    "first_recovery_s": null,
+    "expected_final": "normal",
+    "expected_alarm": false,
+    "matches_expected": true
+  },
+  {
+    "scenario": "single_spike",
+    "final_state": "normal",
+    "any_alarm": false,
+    "first_alarm_s": null,
+    "first_recovery_s": null,
+    "expected_final": "normal",
+    "expected_alarm": false,
+    "matches_expected": true
+  },
+  {
+    "scenario": "fall_then_lying",
+    "final_state": "confirmed",
+    "any_alarm": true,
+    "first_alarm_s": 2.5,
+    "first_recovery_s": null,
+    "expected_final": "confirmed",
+    "expected_alarm": true,
+    "matches_expected": true
+  },
+  {
+    "scenario": "recovery_before_alarm",
+    "final_state": "recovered",
+    "any_alarm": false,
+    "first_alarm_s": null,
+    "first_recovery_s": 2.0,
+    "expected_final": "recovered",
+    "expected_alarm": false,
+    "matches_expected": true
+  },
+  {
+    "scenario": "confirmation_timeout",
+    "final_state": "normal",
+    "any_alarm": false,
+    "first_alarm_s": null,
+    "first_recovery_s": null,
+    "expected_final": "normal",
+    "expected_alarm": false,
+    "matches_expected": true
+  },
+  {
+    "scenario": "low_quality",
+    "final_state": "unknown",
+    "any_alarm": false,
+    "first_alarm_s": null,
+    "first_recovery_s": null,
+    "expected_final": "unknown",
+    "expected_alarm": false,
+    "matches_expected": true
+  },
+  {
+    "scenario": "empty_after_alarm",
+    "final_state": "confirmed",
+    "any_alarm": true,
+    "first_alarm_s": 2.5,
+    "first_recovery_s": null,
+    "expected_final": "confirmed",
+    "expected_alarm": true,
+    "matches_expected": true
+  },
+  {
+    "scenario": "quality_loss_after_alarm",
+    "final_state": "confirmed",
+    "any_alarm": true,
+    "first_alarm_s": 2.5,
+    "first_recovery_s": null,
+    "expected_final": "confirmed",
+    "expected_alarm": true,
+    "matches_expected": true
+  },
+  {
+    "scenario": "intermittent_lying",
+    "final_state": "confirmed",
+    "any_alarm": true,
+    "first_alarm_s": 3.5,
+    "first_recovery_s": null,
+    "expected_final": "confirmed",
+    "expected_alarm": true,
+    "matches_expected": true
+  },
+  {
+    "scenario": "hold_then_recover",
+    "final_state": "recovered",
+    "any_alarm": true,
+    "first_alarm_s": 2.5,
+    "first_recovery_s": 33.0,
+    "expected_final": "recovered",
+    "expected_alarm": true,
+    "matches_expected": true
+  }
+]

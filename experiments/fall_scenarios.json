@@ -1,0 +1,16 @@
+{
+  "scope": "Synthetic probability sequences for post-processing only; not sensor recordings or model predictions.",
+  "interval_seconds": 0.5,
+  "scenarios": [
+    {"id": "normal", "segments": [{"activity": "standing_still", "steps": 10}], "expected_final": "normal", "expected_alarm": false},
+    {"id": "single_spike", "segments": [{"activity": "standing_still", "steps": 2}, {"activity": "fall", "steps": 1}, {"activity": "standing_still", "steps": 6}], "expected_final": "normal", "expected_alarm": false},
+    {"id": "fall_then_lying", "segments": [{"activity": "fall", "steps": 3}, {"activity": "lying", "steps": 5}], "expected_final": "confirmed", "expected_alarm": true},
+    {"id": "recovery_before_alarm", "segments": [{"activity": "fall", "steps": 3}, {"activity": "standing_still", "steps": 4}], "expected_final": "recovered", "expected_alarm": false},
+    {"id": "confirmation_timeout", "segments": [{"activity": "fall", "steps": 3}, {"activity": "other_motion", "steps": 20}], "expected_final": "normal", "expected_alarm": false},
+    {"id": "low_quality", "segments": [{"activity": "fall", "steps": 6, "quality": 0.2}], "expected_final": "unknown", "expected_alarm": false},
+    {"id": "empty_after_alarm", "segments": [{"activity": "fall", "steps": 3}, {"activity": "lying", "steps": 3}, {"activity": "empty", "steps": 6, "people": "0"}], "expected_final": "confirmed", "expected_alarm": true},
+    {"id": "quality_loss_after_alarm", "segments": [{"activity": "fall", "steps": 3}, {"activity": "lying", "steps": 3}, {"activity": "other_motion", "steps": 6, "quality": 0.2}], "expected_final": "confirmed", "expected_alarm": true},
+    {"id": "intermittent_lying", "segments": [{"activity": "fall", "steps": 3}, {"activity": "lying", "steps": 1}, {"activity": "other_motion", "steps": 1}, {"activity": "lying", "steps": 1}, {"activity": "other_motion", "steps": 1}, {"activity": "lying", "steps": 1}], "expected_final": "confirmed", "expected_alarm": true},
+    {"id": "hold_then_recover", "segments": [{"activity": "fall", "steps": 3}, {"activity": "lying", "steps": 3}, {"activity": "standing_still", "steps": 61}], "expected_final": "recovered", "expected_alarm": true}
+  ]
+}

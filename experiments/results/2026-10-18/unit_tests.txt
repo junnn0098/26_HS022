@@ -1,0 +1,36 @@
+test_64_128_192_extract_same_lltf (test_adr018.Adr018Tests.test_64_128_192_extract_same_lltf) ... ok
+test_he_ppdu_is_rejected_for_s3_lltf_model (test_adr018.Adr018Tests.test_he_ppdu_is_rejected_for_s3_lltf_model) ... ok
+test_non_20mhz_frame_is_rejected (test_adr018.Adr018Tests.test_non_20mhz_frame_is_rejected) ... ok
+test_optional_ht_and_stbc_blocks_never_leak_into_lltf (test_adr018.Adr018Tests.test_optional_ht_and_stbc_blocks_never_leak_into_lltf) ... ok
+test_parse_and_derived_features (test_adr018.Adr018Tests.test_parse_and_derived_features) ... ok
+test_sequence_gap_and_wrap (test_adr018.Adr018Tests.test_sequence_gap_and_wrap) ... ok
+test_unknown_raw_width_is_rejected (test_adr018.Adr018Tests.test_unknown_raw_width_is_rejected) ... ok
+test_wrong_magic_is_rejected (test_adr018.Adr018Tests.test_wrong_magic_is_rejected) ... ok
+test_only_trained_classifier_confirmation_counts_as_cough (test_cough.CoughDetectorTests.test_only_trained_classifier_confirmation_counts_as_cough) ... ok
+test_requires_coincident_spikes_from_two_nodes (test_cough.CoughDetectorTests.test_requires_coincident_spikes_from_two_nodes) ... ok
+test_canonical_checkpoint_is_live_ready (test_fall_checkpoint.FallCheckpointTests.test_canonical_checkpoint_is_live_ready) ... skipped 'PyTorch is tested on the Jetson target'
+test_dataparallel_prefix_is_accepted (test_fall_checkpoint.FallCheckpointTests.test_dataparallel_prefix_is_accepted) ... skipped 'PyTorch is tested on the Jetson target'
+test_external_raw_state_dict_needs_metadata (test_fall_checkpoint.FallCheckpointTests.test_external_raw_state_dict_needs_metadata) ... skipped 'PyTorch is tested on the Jetson target'
+test_wrong_feature_contract_is_rejected (test_fall_checkpoint.FallCheckpointTests.test_wrong_feature_contract_is_rejected) ... skipped 'PyTorch is tested on the Jetson target'
+test_confirmed_alarm_is_latched_before_recovery (test_fall_state.FallStateTests.test_confirmed_alarm_is_latched_before_recovery) ... ok
+test_empty_room_clears_candidate (test_fall_state.FallStateTests.test_empty_room_clears_candidate) ... ok
+test_empty_room_prediction_does_not_cancel_confirmed_alarm (test_fall_state.FallStateTests.test_empty_room_prediction_does_not_cancel_confirmed_alarm) ... ok
+test_empty_room_prediction_does_not_cancel_post_fall_check (test_fall_state.FallStateTests.test_empty_room_prediction_does_not_cancel_post_fall_check) ... ok
+test_repeated_fall_then_lying_confirms (test_fall_state.FallStateTests.test_repeated_fall_then_lying_confirms) ... ok
+test_single_spike_does_not_alarm (test_fall_state.FallStateTests.test_single_spike_does_not_alarm) ... ok
+test_node_feature_shape_and_quality (test_features.FeatureTests.test_node_feature_shape_and_quality) ... ok
+test_variable_node_mask (test_features.FeatureTests.test_variable_node_mask) ... ok
+test_variable_node_cough_forward (test_health_model.HealthModelTests.test_variable_node_cough_forward) ... skipped 'torch not installed'
+test_training_labels_collapse_to_user_states (test_labels.LabelTests.test_training_labels_collapse_to_user_states) ... ok
+test_fewer_than_three_groups_is_rejected (test_manifest.ManifestTests.test_fewer_than_three_groups_is_rejected) ... ok
+test_groups_never_cross_splits (test_manifest.ManifestTests.test_groups_never_cross_splits) ... ok
+test_overlapping_multi_person_sessions_share_group (test_manifest.ManifestTests.test_overlapping_multi_person_sessions_share_group) ... ok
+test_variable_node_forward (test_model.ModelTests.test_variable_node_forward) ... skipped 'PyTorch is tested on the Jetson target'
+test_apnea_requires_baseline_two_nodes_and_time (test_respiratory.RespiratoryTests.test_apnea_requires_baseline_two_nodes_and_time) ... ok
+test_multiple_people_blocks_apnea_suspicion (test_respiratory.RespiratoryTests.test_multiple_people_blocks_apnea_suspicion) ... ok
+test_synthetic_fifteen_bpm_is_recovered (test_respiratory.RespiratoryTests.test_synthetic_fifteen_bpm_is_recovered) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 0.027s
+
+OK (skipped=6)
