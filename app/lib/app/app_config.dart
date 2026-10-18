@@ -11,6 +11,12 @@ class AppConfig {
     defaultValue: false,
   );
 
+  // 서버에 HANIUM_API_TOKEN을 설정한 경우에만 같은 값을 넘긴다. 비어 있으면 헤더를 보내지 않는다.
+  static const apiToken = String.fromEnvironment(
+    'API_TOKEN',
+    defaultValue: '',
+  );
+
   static const apiTimeout = Duration(milliseconds: 900);
   static const locationPollInterval = Duration(milliseconds: 350);
   static const healthPollInterval = Duration(seconds: 2);

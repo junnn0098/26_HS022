@@ -11,9 +11,15 @@ class SafetyRepository {
 
   final http.Client _client;
 
+  Map<String, String> get _authHeaders => AppConfig.apiToken.isEmpty
+      ? const {}
+      : {'Authorization': 'Bearer ${AppConfig.apiToken}'};
+
   Future<Map<String, dynamic>?> getJson(String path) async {
     try {
-      final response = await _client.get(AppConfig.httpUri(path)).timeout(AppConfig.apiTimeout);
+      final response = await _client
+          .get(AppConfig.httpUri(path), headers: _authHeaders)
+          .timeout(AppConfig.apiTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
       return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     } catch (_) {
@@ -29,7 +35,7 @@ class SafetyRepository {
       final response = await _client
           .post(
             AppConfig.httpUri(path),
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', ..._authHeaders},
             body: jsonEncode(body),
           )
           .timeout(AppConfig.apiTimeout);

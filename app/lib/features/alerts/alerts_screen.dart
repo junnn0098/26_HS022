@@ -349,7 +349,7 @@ class _ActionSteps extends StatelessWidget {
             _StepData('2', '추가 확인', '응답이 불명확하면 가까운 가족이나 이웃에게 확인을 요청해요.'),
             _StepData('3', '119 판단', '응답이 없거나 통증이 있으면 119 신고 단계로 넘어가요.'),
             _StepData('4', '정보 전달', '주소, 출입 안내, 의료 참고사항을 구조대원에게 전달해요.'),
-            _StepData('5', '상황 기록', '확인 결과를 알림 기록에 남겨 이후 재연이나 보고에 사용해요.'),
+            _StepData('5', '상황 기록', '확인 결과를 알림 기록에 남겨 이후 보고에 사용해요.'),
           ]
         : const [
             _StepData('1', '위치 확인', '현재 위치와 최근 이동 동선을 확인해요.'),
@@ -799,7 +799,7 @@ class _ReplayHint extends StatelessWidget {
           Icon(Icons.play_circle_rounded, color: color, size: 15),
           const SizedBox(width: 5),
           Text(
-            '상황 재연 보기',
+            '예시 재구성 보기',
             style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
           ),
         ],

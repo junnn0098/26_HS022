@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/safety_models.dart';
 import '../../core/state/safety_controller.dart';
@@ -107,11 +108,14 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SectionTitle('119 신고 정보'),
               _EmergencyInfoCard(snapshot: snapshot),
-              const SectionTitle(
-                '상황 재연',
-                trailing: TapHintLabel(icon: Icons.play_circle_rounded, label: '발표용'),
-              ),
-              _DemoTools(controller: controller),
+              // 상황 재연 버튼은 발표 모드(--dart-define=DEMO_MODE=true)에서만 보여준다.
+              if (AppConfig.demoMode) ...[
+                const SectionTitle(
+                  '상황 재연',
+                  trailing: TapHintLabel(icon: Icons.play_circle_rounded, label: '발표용'),
+                ),
+                _DemoTools(controller: controller),
+              ],
               const SizedBox(height: 12),
               _DiagnosticCard(snapshot: snapshot),
             ],

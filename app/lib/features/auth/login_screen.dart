@@ -13,27 +13,11 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+// 계정 인증은 구현하지 않았다. 시연에서 보호자/피보호자 화면을 고르는 역할 선택 화면이다.
 class _LoginScreenState extends State<LoginScreen> {
-  final _idController = TextEditingController(text: 'admin');
-  final _passwordController = TextEditingController(text: '1234');
   AppRole _selectedRole = AppRole.guardian;
-  bool _obscure = true;
-  bool _loading = false;
 
-  @override
-  void dispose() {
-    _idController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _signIn() async {
-    setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 260));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    widget.onSignedIn(_selectedRole);
-  }
+  void _start() => widget.onSignedIn(_selectedRole);
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              '사용할 모드를 선택하세요',
+              '사용할 역할을 선택하세요',
               style: TextStyle(
                 fontSize: 21,
                 fontWeight: FontWeight.w900,
@@ -178,35 +162,35 @@ class _LoginScreenState extends State<LoginScreen> {
               selectedRole: _selectedRole,
               onChanged: (role) => setState(() => _selectedRole = role),
             ),
-            const SizedBox(height: 20),
-            if (isGuardian) ...[
-              _LoginField(
-                controller: _idController,
-                label: '아이디',
-                icon: Icons.person_rounded,
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(height: 12),
-              _LoginField(
-                controller: _passwordController,
-                label: '비밀번호',
-                icon: Icons.lock_rounded,
-                obscureText: _obscure,
-                suffix: IconButton(
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_rounded
-                        : Icons.visibility_off_rounded,
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '시연용 역할 선택 (계정 인증 미구현)',
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: 18),
-            ] else
-              const SizedBox(height: 18),
+            ),
+            const SizedBox(height: 18),
             PrimaryButton(
-              label: _loading ? '시작하는 중...' : '${_selectedRole.title}로 시작하기',
-              icon: Icons.login_rounded,
-              onPressed: _loading ? () {} : _signIn,
+              label: '${_selectedRole.title}로 시작하기',
+              icon: Icons.arrow_forward_rounded,
+              onPressed: _start,
               color: isGuardian ? AppColors.primary : AppColors.success,
             ),
           ],
@@ -311,45 +295,6 @@ class _RoleCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoginField extends StatelessWidget {
-  const _LoginField({
-    required this.controller,
-    required this.label,
-    required this.icon,
-    this.obscureText = false,
-    this.suffix,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final bool obscureText;
-  final Widget? suffix;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        suffixIcon: suffix,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.border),
         ),
       ),
     );

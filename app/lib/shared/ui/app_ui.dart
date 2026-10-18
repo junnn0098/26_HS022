@@ -10,6 +10,7 @@ Color statusColor(SafetyStatus status) {
     SafetyStatus.out => AppColors.warning,
     SafetyStatus.still => AppColors.warning,
     SafetyStatus.danger => AppColors.danger,
+    SafetyStatus.unknown => AppColors.muted,
   };
 }
 
@@ -19,6 +20,7 @@ Color statusSoftColor(SafetyStatus status) {
     SafetyStatus.out => AppColors.warningSoft,
     SafetyStatus.still => AppColors.warningSoft,
     SafetyStatus.danger => AppColors.dangerSoft,
+    SafetyStatus.unknown => AppColors.neutralSoft,
   };
 }
 
@@ -28,7 +30,40 @@ IconData statusIcon(SafetyStatus status) {
     SafetyStatus.out => Icons.directions_walk_rounded,
     SafetyStatus.still => Icons.event_busy_rounded,
     SafetyStatus.danger => Icons.priority_high_rounded,
+    SafetyStatus.unknown => Icons.help_outline_rounded,
   };
+}
+
+/// 스크립트 시연 입력(source == 'scripted_demo')일 때 실제 추론과 구분하려고 붙이는 작은 칩.
+class DemoInputChip extends StatelessWidget {
+  const DemoInputChip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.warningSoft,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.science_rounded, color: AppColors.warning, size: 14),
+          SizedBox(width: 5),
+          Text(
+            '시연 입력',
+            style: TextStyle(
+              color: AppColors.warning,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class AppCard extends StatefulWidget {

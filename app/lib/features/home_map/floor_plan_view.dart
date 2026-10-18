@@ -119,6 +119,7 @@ Color _trailColor(SafetyStatus status) {
     SafetyStatus.out => AppColors.warning,
     SafetyStatus.still => const Color(0xFF7C86FF),
     SafetyStatus.danger => AppColors.danger,
+    SafetyStatus.unknown => AppColors.muted,
   };
 }
 
