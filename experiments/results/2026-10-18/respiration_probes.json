@@ -1,0 +1,37 @@
+[
+  {
+    "case": "zero_signal",
+    "estimate_returned": false,
+    "bpm": null,
+    "confidence": null,
+    "motion_score": null
+  },
+  {
+    "case": "constant_signal",
+    "estimate_returned": false,
+    "bpm": null,
+    "confidence": null,
+    "motion_score": null
+  },
+  {
+    "case": "white_noise_only",
+    "estimate_returned": true,
+    "bpm": 24.652776459093445,
+    "confidence": 0.19988345389262882,
+    "motion_score": 0.1143219218689271
+  },
+  {
+    "case": "short_history",
+    "estimate_returned": false,
+    "bpm": null,
+    "confidence": null,
+    "motion_score": null
+  },
+  {
+    "case": "stale_signal",
+    "estimate_returned": false,
+    "bpm": null,
+    "confidence": null,
+    "motion_score": null
+  }
+]

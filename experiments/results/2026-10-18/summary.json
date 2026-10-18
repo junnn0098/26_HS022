@@ -1,0 +1,302 @@
+{
+  "fall": {
+    "scenarios": 10,
+    "matched": 10,
+    "outcomes": [
+      {
+        "scenario": "normal",
+        "final_state": "normal",
+        "any_alarm": false,
+        "first_alarm_s": null,
+        "first_recovery_s": null,
+        "expected_final": "normal",
+        "expected_alarm": false,
+        "matches_expected": true
+      },
+      {
+        "scenario": "single_spike",
+        "final_state": "normal",
+        "any_alarm": false,
+        "first_alarm_s": null,
+        "first_recovery_s": null,
+        "expected_final": "normal",
+        "expected_alarm": false,
+        "matches_expected": true
+      },
+      {
+        "scenario": "fall_then_lying",
+        "final_state": "confirmed",
+        "any_alarm": true,
+        "first_alarm_s": 2.5,
+        "first_recovery_s": null,
+        "expected_final": "confirmed",
+        "expected_alarm": true,
+        "matches_expected": true
+      },
+      {
+        "scenario": "recovery_before_alarm",
+        "final_state": "recovered",
+        "any_alarm": false,
+        "first_alarm_s": null,
+        "first_recovery_s": 2.0,
+        "expected_final": "recovered",
+        "expected_alarm": false,
+        "matches_expected": true
+      },
+      {
+        "scenario": "confirmation_timeout",
+        "final_state": "normal",
+        "any_alarm": false,
+        "first_alarm_s": null,
+        "first_recovery_s": null,
+        "expected_final": "normal",
+        "expected_alarm": false,
+        "matches_expected": true
+      },
+      {
+        "scenario": "low_quality",
+        "final_state": "unknown",
+        "any_alarm": false,
+        "first_alarm_s": null,
+        "first_recovery_s": null,
+        "expected_final": "unknown",
+        "expected_alarm": false,
+        "matches_expected": true
+      },
+      {
+        "scenario": "empty_after_alarm",
+        "final_state": "confirmed",
+        "any_alarm": true,
+        "first_alarm_s": 2.5,
+        "first_recovery_s": null,
+        "expected_final": "confirmed",
+        "expected_alarm": true,
+        "matches_expected": true
+      },
+      {
+        "scenario": "quality_loss_after_alarm",
+        "final_state": "confirmed",
+        "any_alarm": true,
+        "first_alarm_s": 2.5,
+        "first_recovery_s": null,
+        "expected_final": "confirmed",
+        "expected_alarm": true,
+        "matches_expected": true
+      },
+      {
+        "scenario": "intermittent_lying",
+        "final_state": "confirmed",
+        "any_alarm": true,
+        "first_alarm_s": 3.5,
+        "first_recovery_s": null,
+        "expected_final": "confirmed",
+        "expected_alarm": true,
+        "matches_expected": true
+      },
+      {
+        "scenario": "hold_then_recover",
+        "final_state": "recovered",
+        "any_alarm": true,
+        "first_alarm_s": 2.5,
+        "first_recovery_s": 33.0,
+        "expected_final": "recovered",
+        "expected_alarm": true,
+        "matches_expected": true
+      }
+    ]
+  },
+  "respiration": {
+    "trials": 60,
+    "summaries": [
+      {
+        "noise_std_iq_units": 0.0,
+        "trials": 15,
+        "returned": 15,
+        "mae_bpm": 0.041304939298823305,
+        "max_error_bpm": 0.0725579233353173
+      },
+      {
+        "noise_std_iq_units": 0.7,
+        "trials": 15,
+        "returned": 15,
+        "mae_bpm": 0.04042841137282712,
+        "max_error_bpm": 0.07185474070618092
+      },
+      {
+        "noise_std_iq_units": 3.0,
+        "trials": 15,
+        "returned": 15,
+        "mae_bpm": 0.03863515122179475,
+        "max_error_bpm": 0.08389157170284633
+      },
+      {
+        "noise_std_iq_units": 8.0,
+        "trials": 15,
+        "returned": 15,
+        "mae_bpm": 0.04490925352998705,
+        "max_error_bpm": 0.08616634751208885
+      }
+    ],
+    "probes": [
+      {
+        "case": "zero_signal",
+        "estimate_returned": false,
+        "bpm": null,
+        "confidence": null,
+        "motion_score": null
+      },
+      {
+        "case": "constant_signal",
+        "estimate_returned": false,
+        "bpm": null,
+        "confidence": null,
+        "motion_score": null
+      },
+      {
+        "case": "white_noise_only",
+        "estimate_returned": true,
+        "bpm": 24.652776459093445,
+        "confidence": 0.19988345389262882,
+        "motion_score": 0.1143219218689271
+      },
+      {
+        "case": "short_history",
+        "estimate_returned": false,
+        "bpm": null,
+        "confidence": null,
+        "motion_score": null
+      },
+      {
+        "case": "stale_signal",
+        "estimate_returned": false,
+        "bpm": null,
+        "confidence": null,
+        "motion_score": null
+      }
+    ]
+  },
+  "packet_loss": {
+    "trials": 36,
+    "all_finite": true,
+    "node_masks": [
+      {
+        "nodes_present": 0,
+        "shape": [
+          4,
+          193,
+          160
+        ],
+        "mask": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "quality": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "finite_features": true
+      },
+      {
+        "nodes_present": 1,
+        "shape": [
+          4,
+          193,
+          160
+        ],
+        "mask": [
+          true,
+          false,
+          false,
+          false
+        ],
+        "quality": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "finite_features": true
+      },
+      {
+        "nodes_present": 2,
+        "shape": [
+          4,
+          193,
+          160
+        ],
+        "mask": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "quality": [
+          1.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "finite_features": true
+      },
+      {
+        "nodes_present": 4,
+        "shape": [
+          4,
+          193,
+          160
+        ],
+        "mask": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "quality": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "finite_features": true
+      }
+    ]
+  },
+  "existing_checks": {
+    "discovered": 31,
+    "passed": 25,
+    "skipped": [
+      {
+        "test": "test_canonical_checkpoint_is_live_ready (test_fall_checkpoint.FallCheckpointTests.test_canonical_checkpoint_is_live_ready)",
+        "reason": "PyTorch is tested on the Jetson target"
+      },
+      {
+        "test": "test_dataparallel_prefix_is_accepted (test_fall_checkpoint.FallCheckpointTests.test_dataparallel_prefix_is_accepted)",
+        "reason": "PyTorch is tested on the Jetson target"
+      },
+      {
+        "test": "test_external_raw_state_dict_needs_metadata (test_fall_checkpoint.FallCheckpointTests.test_external_raw_state_dict_needs_metadata)",
+        "reason": "PyTorch is tested on the Jetson target"
+      },
+      {
+        "test": "test_wrong_feature_contract_is_rejected (test_fall_checkpoint.FallCheckpointTests.test_wrong_feature_contract_is_rejected)",
+        "reason": "PyTorch is tested on the Jetson target"
+      },
+      {
+        "test": "test_variable_node_cough_forward (test_health_model.HealthModelTests.test_variable_node_cough_forward)",
+        "reason": "torch not installed"
+      },
+      {
+        "test": "test_variable_node_forward (test_model.ModelTests.test_variable_node_forward)",
+        "reason": "PyTorch is tested on the Jetson target"
+      }
+    ],
+    "failures": 0,
+    "errors": 0,
+    "successful": true,
+    "selftest_exit_code": 0
+  }
+}

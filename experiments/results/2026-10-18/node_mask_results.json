@@ -1,0 +1,86 @@
+[
+  {
+    "nodes_present": 0,
+    "shape": [
+      4,
+      193,
+      160
+    ],
+    "mask": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "quality": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "finite_features": true
+  },
+  {
+    "nodes_present": 1,
+    "shape": [
+      4,
+      193,
+      160
+    ],
+    "mask": [
+      true,
+      false,
+      false,
+      false
+    ],
+    "quality": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "finite_features": true
+  },
+  {
+    "nodes_present": 2,
+    "shape": [
+      4,
+      193,
+      160
+    ],
+    "mask": [
+      true,
+      true,
+      false,
+      false
+    ],
+    "quality": [
+      1.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    "finite_features": true
+  },
+  {
+    "nodes_present": 4,
+    "shape": [
+      4,
+      193,
+      160
+    ],
+    "mask": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "quality": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "finite_features": true
+  }
+]
