@@ -80,8 +80,8 @@ class _EventReplayScreenState extends State<EventReplayScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: ScreenScaffold(
-        title: '상황 재연',
-        subtitle: '알림 발생 흐름을 15프레임으로 다시 확인해요',
+        title: '예시 재구성',
+        subtitle: '알림 1건으로 만든 15프레임 예시예요 (실제 기록 아님)',
         trailing: IconButton.filled(
           onPressed: () => Navigator.of(context).pop(),
           style: IconButton.styleFrom(
@@ -153,7 +153,7 @@ class _EventReplayScreenState extends State<EventReplayScreen> {
                 ],
               ),
             ),
-            const SectionTitle('재연 해석'),
+            const SectionTitle('예시 해석'),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +434,7 @@ class _ReplayMetricRow extends StatelessWidget {
         ),
         _MetricPill(
           icon: Icons.verified_rounded,
-          label: '신뢰도',
+          label: '예시 신뢰도',
           value: '${(frame.confidence * 100).round()}%',
           color: statusColor(alert.status),
         ),
@@ -616,12 +616,12 @@ class _ReplayFrame {
 
   static String _descriptionFor(int index, AlertEvent alert) {
     if (index < 8) {
-      return '평소 생활 움직임과 유사한 이동 흐름이 확인되는 구간이에요.';
+      return '알림 전 평소 이동을 가정한 예시 구간이에요.';
     }
     if (index < 12) {
       return alert.status == SafetyStatus.danger
-          ? '짧은 시간 안에 움직임 패턴이 크게 변해 위험 후보로 올라간 구간이에요.'
-          : '평소와 다른 위치 변화가 감지되어 주의 단계로 넘어가는 구간이에요.';
+          ? '움직임이 크게 바뀌어 위험 후보로 넘어가는 과정을 보여주는 예시 구간이에요.'
+          : '평소와 다른 위치 변화로 주의 단계에 들어가는 과정을 보여주는 예시 구간이에요.';
     }
     return alert.message;
   }

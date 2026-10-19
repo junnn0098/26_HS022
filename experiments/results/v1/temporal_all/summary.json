@@ -1,0 +1,70 @@
+{
+  "protocol": "temporal",
+  "batches": "all",
+  "channels": "all",
+  "epochs": 25,
+  "lr": 0.001,
+  "batch_size": 32,
+  "loss": "weighted cross-entropy",
+  "optimizer": "Adam(wd=1e-4) + cosine",
+  "threshold": 0.5,
+  "parameters": 65762,
+  "metadata_sha256": "08bf5795713c86b261a12804f1cf73491995f3c499109ba3a26f73412902a4f8",
+  "threads": 2,
+  "environment": {
+    "python": "3.13.15",
+    "numpy": "2.5.3",
+    "torch": "2.14.1+cpu"
+  },
+  "runs": 3,
+  "summary": {
+    "recall": {
+      "mean": 0.0325,
+      "std": 0.046,
+      "min": 0.0,
+      "max": 0.0975
+    },
+    "runs_with_value": {
+      "recall": 3,
+      "precision": 1,
+      "f1": 3,
+      "specificity": 3,
+      "accuracy": 3,
+      "auroc": 3
+    },
+    "precision": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "f1": {
+      "mean": 0.0592,
+      "std": 0.0838,
+      "min": 0.0,
+      "max": 0.1777
+    },
+    "specificity": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "accuracy": {
+      "mean": 0.5454,
+      "std": 0.0216,
+      "min": 0.5301,
+      "max": 0.5759
+    },
+    "auroc": {
+      "mean": 0.7083,
+      "std": 0.0255,
+      "min": 0.6779,
+      "max": 0.7403
+    },
+    "tp": 35,
+    "fp": 0,
+    "tn": 1215,
+    "fn": 1042
+  }
+}

@@ -283,6 +283,12 @@ class _MoodHero extends StatelessWidget {
                       label: '호흡 확인',
                       onTap: onBreathingTap,
                     ),
+                    if (snapshot.isScriptedDemoSource)
+                      _HeroChip(
+                        icon: Icons.science_rounded,
+                        label: '시연 입력',
+                        onTap: onStatusTap,
+                      ),
                   ],
                 ),
               ],
@@ -406,8 +412,11 @@ class _BreathingCheckCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final needsAttention = snapshot.breathingNeedsAttention;
+    final breathingRate = snapshot.breathingRate;
     final color = needsAttention
         ? (snapshot.isDanger ? AppColors.danger : AppColors.warning)
+        : breathingRate == null
+        ? AppColors.muted
         : AppColors.success;
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
@@ -469,38 +478,50 @@ class _BreathingCheckCard extends StatelessWidget {
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final rateText = Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          snapshot.breathingRate.toStringAsFixed(1),
-                          style: TextStyle(
-                            color: color,
-                            fontSize: largeText ? 36 : 40,
-                            height: 0.95,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.2,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 5),
-                          child: Text(
-                            '회/분',
+                    final rateText = breathingRate == null
+                        ? Text(
+                            '측정 대기',
                             style: TextStyle(
-                              color: color.withValues(alpha: 0.78),
-                              fontSize: 13,
+                              color: color,
+                              fontSize: largeText ? 26 : 28,
+                              height: 1.0,
                               fontWeight: FontWeight.w900,
                             ),
-                          ),
-                        ),
-                      ],
-                    );
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                breathingRate.toStringAsFixed(1),
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: largeText ? 36 : 40,
+                                  height: 0.95,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1.2,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 5),
+                                child: Text(
+                                  '회/분',
+                                  style: TextStyle(
+                                    color: color.withValues(alpha: 0.78),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
                     final sourcePill = _BreathingPill(
-                      icon: snapshot.breathingEstimated
-                          ? Icons.science_rounded
-                          : Icons.sensors_rounded,
+                      icon: breathingRate == null
+                          ? Icons.hourglass_empty_rounded
+                          : snapshot.isLiveSensorSource
+                          ? Icons.sensors_rounded
+                          : Icons.science_rounded,
                       label: snapshot.breathingSourceLabel,
                       color: color,
                     );
@@ -531,29 +552,31 @@ class _BreathingCheckCard extends StatelessWidget {
                   child: CustomPaint(
                     painter: _BreathingWavePainter(
                       color: color,
-                      rate: snapshot.breathingRate,
+                      rate: breathingRate,
                       attention: needsAttention,
                     ),
                     child: const SizedBox.expand(),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _BreathingPill(
-                      icon: Icons.verified_rounded,
-                      label: '판단 확실도 ${(snapshot.breathingConfidence * 100).round()}%',
-                      color: color,
-                    ),
-                    _BreathingPill(
-                      icon: Icons.favorite_border_rounded,
-                      label: needsAttention ? '한 번 확인 필요' : '편안한 범위',
-                      color: color,
-                    ),
-                  ],
-                ),
+                if (breathingRate != null) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _BreathingPill(
+                        icon: Icons.verified_rounded,
+                        label: '판단 확실도 ${(snapshot.breathingConfidence * 100).round()}%',
+                        color: color,
+                      ),
+                      _BreathingPill(
+                        icon: Icons.favorite_border_rounded,
+                        label: needsAttention ? '한 번 확인 필요' : '편안한 범위',
+                        color: color,
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -644,7 +667,8 @@ class _BreathingWavePainter extends CustomPainter {
   });
 
   final Color color;
-  final double rate;
+  // null이면 측정값이 없으므로 파형을 그리지 않고 기준선만 그린다.
+  final double? rate;
   final bool attention;
 
   @override
@@ -652,12 +676,18 @@ class _BreathingWavePainter extends CustomPainter {
     if (size.width <= 0 || size.height <= 0) return;
 
     final centerY = size.height * 0.52;
-    final amplitude = attention ? size.height * 0.26 : size.height * 0.18;
-    final frequency = (rate / 10).clamp(1.2, 2.8).toDouble();
     final basePaint = Paint()
       ..color = const Color(0xFFE7ECF4)
       ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
+    final rate = this.rate;
+    if (rate == null) {
+      canvas.drawLine(Offset(0, centerY), Offset(size.width, centerY), basePaint);
+      return;
+    }
+
+    final amplitude = attention ? size.height * 0.26 : size.height * 0.18;
+    final frequency = (rate / 10).clamp(1.2, 2.8).toDouble();
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8
@@ -1136,6 +1166,23 @@ class _LifeRhythm {
       );
     }
 
+    if (snapshot.status == SafetyStatus.unknown) {
+      return const _LifeRhythm(
+        title: '지금 상태를 확인하는 중이에요',
+        message: '센서 판단 결과가 아직 없어요. 불편하면 언제든 보호자에게 연락해 주세요.',
+        diary: '지금은 센서 판단 결과가 없어 생활 리듬을 기록하지 못했어요.',
+        badge: '확인 필요',
+        actionTitle: '불편하면 바로 알려 주세요',
+        actionMessage: '센서 판단이 없는 동안에도 보호자 연락과 도움 요청은 그대로 쓸 수 있어요.',
+        actionIcon: Icons.help_outline_rounded,
+        tips: [
+          '불편하거나 어지러우면 보호자에게 바로 전화해요.',
+          '센서 판단이 없어도 도움 요청 버튼은 그대로 쓸 수 있어요.',
+          '위치 공유를 켜 두면 보호자가 빠르게 확인할 수 있어요.',
+        ],
+      );
+    }
+
     return _LifeRhythm(
       title: '평소와 비슷해요',
       message: '${snapshot.room}에서 안정적인 생활 움직임이 확인되었어요.',
@@ -1159,5 +1206,6 @@ List<Color> _heroGradient(SafetyStatus status) {
     SafetyStatus.out => const [Color(0xFFFFB648), Color(0xFFFB7185)],
     SafetyStatus.still => const [Color(0xFFF59E0B), Color(0xFF8B5CF6)],
     SafetyStatus.normal => const [Color(0xFF25C184), Color(0xFF5B6CF6)],
+    SafetyStatus.unknown => const [Color(0xFF8D96A9), Color(0xFF6B7489)],
   };
 }

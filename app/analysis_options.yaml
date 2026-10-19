@@ -14,6 +14,13 @@ analyzer:
     # 이전 단일 파일 구조에서 분리해 둔 백업성 코드입니다.
     # 현재 앱 진입점은 lib/app, lib/core, lib/features, lib/shared를 사용합니다.
     - lib/src/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   # The lint rules applied to this project can be customized in the

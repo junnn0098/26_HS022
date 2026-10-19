@@ -9,15 +9,15 @@ ESP(UDP 5005, ADR-018)에서 CSI를 받아 0.5초마다 한 줄씩:
 움직임 강도 임계값 기반 표시입니다(시연용). 평상시엔 낮고, 낙상처럼 급격한
 움직임이 있으면 수치가 확 튑니다.
 
-사용법 (젯슨, 저장소 루트 hanium_jetson 에서):
+사용법 (젯슨, hanium_fall_v2 를 import 하므로 edge_ai/ 폴더에서 모듈로 실행):
     # 평상시 상황에서 녹화
-    python3 demo_log.py --label normal
+    python3 -m tools.demo_log --label normal
 
     # 낙상 재연하면서 녹화 (안전 매트 위에서)
-    python3 demo_log.py --label fall
+    python3 -m tools.demo_log --label fall
 
     # 임계값/노드 조정
-    python3 demo_log.py --label fall --alert 40 --nodes 1,2,3,4
+    python3 -m tools.demo_log --label fall --alert 40 --nodes 1,2,3,4
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from pathlib import Path
 
 import numpy as np
 
-# 저장소의 검증된 ADR-018 파서 재사용 (hanium_jetson 루트에서 실행)
+# 저장소의 검증된 ADR-018 파서 재사용 (edge_ai/ 에서 python3 -m tools.demo_log 로 실행)
 from hanium_fall_v2.adr018 import parse_adr018
 
 ANSI = {"reset": "\033[0m", "dim": "\033[90m", "green": "\033[92m",

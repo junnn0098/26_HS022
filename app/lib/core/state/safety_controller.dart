@@ -121,9 +121,6 @@ class SafetyController extends ChangeNotifier {
     _snapshot = _snapshot.copyWith(
       status: SafetyStatus.normal,
       pose: 'standing',
-      breathingRate: breathingRateForStatus(SafetyStatus.normal),
-      breathingConfidence: 0.72,
-      breathingEstimated: true,
       alerts: alerts,
       connectionNote: '보호자가 안전을 확인했어요',
       lastUpdated: DateTime.now(),
@@ -143,9 +140,6 @@ class SafetyController extends ChangeNotifier {
     _snapshot = _snapshot.copyWith(
       status: SafetyStatus.normal,
       pose: 'standing',
-      breathingRate: breathingRateForStatus(SafetyStatus.normal),
-      breathingConfidence: 0.72,
-      breathingEstimated: true,
       alerts: alerts,
       connectionNote: '괜찮다고 보호자에게 알렸어요',
       lastUpdated: DateTime.now(),
@@ -173,6 +167,7 @@ class SafetyController extends ChangeNotifier {
         'x': preset.$1,
         'y': preset.$2,
         'room': preset.$3,
+        'source': 'app-demo',
       }, notifyAlways: true);
     }
   }
@@ -381,18 +376,15 @@ class SafetyController extends ChangeNotifier {
         : cleanText(map['room'], '위치 공유 꺼짐');
     final pose = cleanText(map['pose'], poseFromStatus(status));
     final confidence = normalizedDouble(map['confidence'], _snapshot.confidence);
-    final dataSource = cleanText(map['source'], 'sensor');
-    final rawBreathingRate =
-        map['breathingRate'] ?? map['respirationRate'] ?? map['breathRate'];
-    final breathingEstimated = rawBreathingRate == null;
-    final breathingRate =
-        optionalBoundedDouble(rawBreathingRate, min: 6, max: 36) ?? breathingRateForStatus(status);
+    final dataSource = cleanText(map['source'], 'unknown');
+    // 호흡수가 없으면 임의 값을 채우지 않고 null(측정 대기)로 둔다.
+    final breathingRate = measuredBreathingRate(map);
     final breathingConfidence = normalizedDouble(
       map['breathingConfidence'] ?? map['respirationConfidence'],
-      breathingEstimated ? 0.66 : _snapshot.breathingConfidence,
+      breathingRate == null ? 0.66 : _snapshot.breathingConfidence,
     );
     final signature =
-        '${x.toStringAsFixed(3)}|${y.toStringAsFixed(3)}|$status|$room|$pose|${confidence.toStringAsFixed(2)}|${breathingRate.toStringAsFixed(1)}|${breathingConfidence.toStringAsFixed(2)}|$breathingEstimated|$locationSharingEnabled|$dataSource';
+        '${x.toStringAsFixed(3)}|${y.toStringAsFixed(3)}|$status|$room|$pose|${confidence.toStringAsFixed(2)}|${breathingRate?.toStringAsFixed(1) ?? '-'}|${breathingConfidence.toStringAsFixed(2)}|$locationSharingEnabled|$dataSource';
 
     if (!notifyAlways && signature == _lastLocationSignature) return;
     _lastLocationSignature = signature;
@@ -407,7 +399,8 @@ class SafetyController extends ChangeNotifier {
     }
 
     var alerts = _snapshot.alerts;
-    if (status != SafetyStatus.normal) {
+    // 판단 불가(unknown)는 안전 알림이나 푸시를 만들지 않는다.
+    if (status != SafetyStatus.normal && status != SafetyStatus.unknown) {
       final liveAlert = AlertEvent.fromStatus(status, room: room);
       _showSafetyNotification(liveAlert);
       alerts = [liveAlert, ...alerts.where((alert) => alert.status != status)].take(40).toList();
@@ -421,8 +414,8 @@ class SafetyController extends ChangeNotifier {
       y: y,
       confidence: confidence,
       breathingRate: breathingRate,
+      clearBreathingRate: breathingRate == null,
       breathingConfidence: breathingConfidence,
-      breathingEstimated: breathingEstimated,
       locationSharingEnabled: locationSharingEnabled,
       dataSource: dataSource,
       lastUpdated: DateTime.now(),
@@ -510,7 +503,7 @@ class SafetyController extends ChangeNotifier {
 
   (double, double, String) _scenarioPreset(SafetyStatus status) {
     return switch (status) {
-      SafetyStatus.normal => (0.35, 0.45, RoomResolver.living),
+      SafetyStatus.normal || SafetyStatus.unknown => (0.35, 0.45, RoomResolver.living),
       SafetyStatus.out => (0.76, 0.66, RoomResolver.entrance),
       SafetyStatus.still => (0.31, 0.68, RoomResolver.bedroom),
       SafetyStatus.danger => (0.78, 0.70, RoomResolver.entrance),

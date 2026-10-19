@@ -1,0 +1,61 @@
+{
+  "scope": "Synthetic loopback HTTP only; no actual CSI, trained model, Flutter device or FCM.",
+  "executed_at": "2026-10-19T06:18:21+09:00",
+  "python": "3.13.15",
+  "platform": "Windows",
+  "node_version": "v24.18.0",
+  "hash_method": "SHA-256 of file content with CRLF normalised to LF; POSIX paths from the repository root",
+  "source_sha256": {
+    "app/server/local_server.js": "bbeb3d5a43f30826ca8da297c87209f254822d84a8e68b9f2a6112f0b8b7023c",
+    "app/server/package.json": "a8d372ec01c859e3a794ffaaf3187556685317bdeed02ec4d932ba566cecb40d",
+    "app/server/jetson_edge_client.py": "35caed6e39cac9e131d22f97d9d828b29f7c65d242308ee74d6afbe8a2bb5a92",
+    "experiments/check_server_bridge.py": "79bc3706400886bc18f0fe37715c01cb7c09d5658d5ac99ca065764c0b6e2d64"
+  },
+  "temporary_copy": "local_server.js and package.json copied unchanged; env HOST=127.0.0.1, free PORT, REAL_SENSOR_ONLY=true",
+  "expected": {
+    "initial_status_before_input": "unknown",
+    "confirmed_status": "danger",
+    "provided_breathing_rate": 18.2,
+    "provided_breathing_estimated_flag": false,
+    "model_unavailable_forwarded_as": "unknown",
+    "model_unavailable_server_status": "unknown",
+    "missing_breathing_omitted_by_bridge": true,
+    "missing_breathing_server_value": null,
+    "missing_breathing_server_estimated_flag": false,
+    "stale_unix_time_1_accepted": false,
+    "stale_reported_by_cli": true,
+    "stale_cli_exit_code": 1,
+    "server_status_after_stale": "unknown"
+  },
+  "observations": {
+    "initial_status_before_input": "unknown",
+    "confirmed_status": "danger",
+    "provided_breathing_rate": 18.2,
+    "provided_breathing_estimated_flag": false,
+    "model_unavailable_forwarded_as": "unknown",
+    "model_unavailable_server_status": "unknown",
+    "missing_breathing_omitted_by_bridge": true,
+    "missing_breathing_server_value": null,
+    "missing_breathing_server_estimated_flag": false,
+    "stale_unix_time_1_accepted": false,
+    "stale_reported_by_cli": true,
+    "stale_cli_exit_code": 1,
+    "server_status_after_stale": "unknown"
+  },
+  "checks": {
+    "initial_status_before_input": true,
+    "confirmed_status": true,
+    "provided_breathing_rate": true,
+    "provided_breathing_estimated_flag": true,
+    "model_unavailable_forwarded_as": true,
+    "model_unavailable_server_status": true,
+    "missing_breathing_omitted_by_bridge": true,
+    "missing_breathing_server_value": true,
+    "missing_breathing_server_estimated_flag": true,
+    "stale_unix_time_1_accepted": true,
+    "stale_reported_by_cli": true,
+    "stale_cli_exit_code": true,
+    "server_status_after_stale": true
+  },
+  "all_checks_passed": true
+}

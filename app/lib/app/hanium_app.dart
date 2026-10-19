@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/models/app_role.dart';
+import '../core/services/local_safety_cache.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/safety_repository.dart';
 import '../core/state/safety_controller.dart';
@@ -12,7 +13,17 @@ import '../features/shell/main_shell.dart';
 import 'app_theme.dart';
 
 class HaniumApp extends StatefulWidget {
-  const HaniumApp({super.key});
+  // 테스트에서는 네트워크·Firebase·파일 캐시 대신 가짜 구현을 넣을 수 있다.
+  const HaniumApp({
+    this.repository,
+    this.cache,
+    this.notificationService,
+    super.key,
+  });
+
+  final SafetyRepository? repository;
+  final LocalSafetyCache? cache;
+  final NotificationService? notificationService;
 
   @override
   State<HaniumApp> createState() => _HaniumAppState();
@@ -28,9 +39,10 @@ class _HaniumAppState extends State<HaniumApp> {
   @override
   void initState() {
     super.initState();
-    _repository = SafetyRepository();
-    _controller = SafetyController(_repository);
-    _notificationService = NotificationService(_repository);
+    _repository = widget.repository ?? SafetyRepository();
+    _controller = SafetyController(_repository, cache: widget.cache);
+    _notificationService =
+        widget.notificationService ?? NotificationService(_repository);
     _controller.start();
     unawaited(_notificationService.start(role: _role));
   }

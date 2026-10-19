@@ -262,6 +262,15 @@ class _StatusGuideData {
         icon: Icons.priority_high_rounded,
         color: AppColors.danger,
       ),
+      SafetyStatus.unknown => const _StatusGuideData(
+        title: '확인 필요',
+        summary: '판단할 입력이 없음',
+        description:
+            '엣지 모델을 쓸 수 없거나 입력이 오래되어 지금 상태를 판단하지 못한 상태예요. 정상이라는 뜻도, 위험이라는 뜻도 아니에요.',
+        action: '센서와 Jetson 연결을 확인하고, 필요하면 어르신께 직접 안부를 확인해 주세요.',
+        icon: Icons.help_outline_rounded,
+        color: AppColors.muted,
+      ),
     };
   }
 
@@ -330,18 +339,21 @@ class _GuardianLevelGuide extends StatelessWidget {
       SafetyStatus.normal => '정상',
       SafetyStatus.out || SafetyStatus.still => '주의',
       SafetyStatus.danger => '위험',
+      SafetyStatus.unknown => '확인 필요',
     };
     final body = switch (displayStatus) {
       SafetyStatus.normal => '평소 패턴',
       SafetyStatus.out => '현관 접근',
       SafetyStatus.still => '무반응',
       SafetyStatus.danger => '낙상 의심',
+      SafetyStatus.unknown => '판단 입력 없음',
     };
     final action = switch (displayStatus) {
       SafetyStatus.normal => '생활 확인',
       SafetyStatus.out => '위치 확인',
       SafetyStatus.still => '안부 확인',
       SafetyStatus.danger => '즉시 조치',
+      SafetyStatus.unknown => '연결 확인',
     };
 
     return _LevelGuideChip(
@@ -532,10 +544,16 @@ class _DailySummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = statusColor(snapshot.status);
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.1;
-    final title = snapshot.needsAttention
+    final title = snapshot.isUnknown
+        ? (largeText ? '상태 확인 중이에요' : '지금 상태를 판단할 수 없어요')
+        : snapshot.needsAttention
         ? (largeText ? '확인이 필요해요' : '확인이 필요한 변화가 있어요')
         : (largeText ? '평소와 비슷해요' : '평소와 비슷한 하루예요');
-    final body = snapshot.needsAttention
+    final body = snapshot.isUnknown
+        ? (largeText
+              ? '판단에 쓸 입력이 아직 없어요.'
+              : '엣지 모델 결과가 없거나 오래되었어요. 정상이라는 뜻은 아니에요.')
+        : snapshot.needsAttention
         ? (largeText
               ? '도면에서 위치와 이동을 확인해 주세요.'
               : '도면에서 위치와 최근 이동 흐름을 먼저 확인해 주세요.')
@@ -734,6 +752,7 @@ class _DataSourcePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (snapshot.isScriptedDemoSource) return const DemoInputChip();
     final color = snapshot.isLiveSensorSource
         ? AppColors.success
         : AppColors.primary;

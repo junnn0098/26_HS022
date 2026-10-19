@@ -1,0 +1,3 @@
+# tools/ 보조 도구 의존성 (edge_ai/ 에서: python3 -m pip install -r tools/requirements.txt)
+-r ../requirements.txt
+websockets>=10.1

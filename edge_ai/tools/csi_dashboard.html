@@ -1,0 +1,311 @@
+<meta charset="utf-8">
+<title>CSI 실시간 모니터</title>
+<style>
+  /* ── 레이아웃: 상단 상태바 + 좌(노드 1~4 각각 파형 2×2)·우(합성 예시 낙상 파형) · 좁으면 세로 적층 ──
+     control-room 다크 단일 테마: 계측기 느낌의 모노 데이터 + 산세리프 UI */
+  :root{
+    --bg:#070b12;
+    --panel:#0f1620;
+    --panel-2:#0b111a;
+    --edge:#1d2a3a;
+    --grid:rgba(120,150,190,.09);
+    --fg:#e8eff7;
+    --muted:#8294aa;
+    --faint:#5a6b80;
+    --live:#2fd6bd;
+    --live-dim:rgba(47,214,189,.14);
+    --alert:#ff5468;
+    --alert-dim:rgba(255,84,104,.14);
+    --warn:#ffb23e;
+    --ok:#36d07a;
+    color-scheme:dark;
+    --mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Menlo,monospace;
+    --sans:"IBM Plex Sans KR","IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:radial-gradient(1200px 600px at 70% -10%,#0d1420 0%,transparent 60%),var(--bg);
+    color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  }
+  .wrap{min-height:100%;display:flex;flex-direction:column;padding:16px;padding-block:14px 16px;gap:14px;max-width:1600px;margin:0 auto}
+
+  header{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .brand h1{margin:0;font-size:19px;font-weight:600;letter-spacing:.2px;text-wrap:balance}
+  .brand .sub{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.3px;text-transform:uppercase}
+  .spacer{flex:1 1 40px}
+  .status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;padding:7px 13px;border:1px solid var(--edge);border-radius:999px;background:var(--panel-2);white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .status[data-s="live"] .dot{background:var(--ok);box-shadow:0 0 0 3px rgba(54,208,122,.18)}
+  .status[data-s="demo"] .dot{background:var(--warn);box-shadow:0 0 0 3px rgba(255,178,62,.16)}
+  .status[data-s="wait"] .dot{background:var(--faint);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .status .lbl{color:var(--muted)}.status .val{color:var(--fg)}
+  .btn{font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:8px 13px;cursor:pointer;transition:border-color .15s,background .15s}
+  .btn:hover{border-color:var(--live);background:#12202a}
+  .btn:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+
+  .grid{flex:1 1 auto;display:grid;gap:14px;min-height:0;grid-template-columns:1.6fr 1fr}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+  /* 노드 2×2 */
+  .nodes{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;min-height:0}
+  @media (max-width:520px){.nodes{grid-template-columns:1fr;grid-template-rows:repeat(4,160px)}}
+
+  .panel{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+    border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+  .panel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nodec,var(--live))}
+  .panel.fall{border-radius:14px}
+  .panel.fall::before{background:var(--alert)}
+
+  .nhead{display:flex;align-items:center;gap:8px;padding:9px 12px 8px 14px;border-bottom:1px solid var(--edge)}
+  .nhead .ntag{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--nodec,var(--live));letter-spacing:.5px}
+  .nhead .nstate{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .ndot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+  .panel[data-on="1"] .ndot{background:var(--ok)}
+  .panel[data-on="demo"] .ndot{background:var(--warn)}
+
+  .canvas-wrap{position:relative;flex:1 1 auto;min-height:90px}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  /* 실측이 아닌 파형 워터마크: 노드 목업(미연결)·대기(수신 없음), 합성 예시 낙상 패널 */
+  .panel[data-on="demo"] .canvas-wrap::after,.panel[data-on="0"] .canvas-wrap::after,.panel.fall .canvas-wrap::after{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+    font-family:var(--mono);font-size:18px;font-weight:600;letter-spacing:1px;opacity:.55}
+  .panel[data-on="demo"] .canvas-wrap::after{content:"목업 · 실측 아님";color:var(--warn)}
+  .panel[data-on="0"] .canvas-wrap::after{content:"대기 · 수신 없음";color:var(--muted)}
+  .panel.fall .canvas-wrap::after{content:"합성 예시 · 실측 아님";color:var(--fg);inset:auto auto 10px 12px;
+    font-size:12px;padding:4px 9px;border-radius:5px;background:rgba(7,11,18,.82);border:1px solid var(--alert);opacity:1}
+
+  /* 낙상 패널 */
+  .phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px 11px 18px;border-bottom:1px solid var(--edge)}
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:var(--alert-dim);color:var(--alert);font-weight:600}
+  .phead h2{margin:0;font-size:15px;font-weight:600}
+  .phead .note{font-size:11.5px;color:var(--muted);margin-left:auto;text-align:right}
+  .meter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 16px 12px 18px;border-top:1px solid var(--edge);font-family:var(--mono);font-size:12px}
+  .play{display:flex;align-items:center;gap:10px;flex:1 1 160px;min-width:120px}
+  .track{flex:1;height:7px;border-radius:4px;background:#0a1017;border:1px solid var(--edge);overflow:hidden}
+  .track > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--alert),#ff9aa6)}
+  .loop{font-size:10.5px;color:var(--faint);letter-spacing:.4px;text-transform:uppercase}
+  .v{color:var(--fg);font-variant-numeric:tabular-nums}
+
+  footer{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--faint)}
+  footer .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  footer .node{padding:3px 8px;border:1px solid var(--edge);border-radius:6px;color:var(--muted)}
+  footer code{color:var(--live);background:var(--live-dim);padding:2px 6px;border-radius:4px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>WiFi CSI 실시간 모니터</h1>
+      <span class="sub">ESP32-S3 ×4 · 노드별 LLTF 64 subcarriers · 2.4GHz ch.6</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="pauseBtn">❚❚ 일시정지</button>
+    <div class="status" id="status" data-s="wait" role="status" aria-live="polite">
+      <span class="dot"></span><span class="lbl">상태</span><span class="val" id="statusText">연결 대기</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- 노드 1~4 각각 파형 -->
+    <div class="nodes" id="nodes"></div>
+
+    <!-- 낙상 패널 -->
+    <section class="panel fall" aria-label="합성 예시 파형 (실측 아님)">
+      <div class="phead">
+        <span class="tag">합성</span><h2>합성 예시 파형 (실측 아님)</h2>
+        <span class="note">낙상 구간 설명용 · 코드로 생성 · 5초 반복</span>
+      </div>
+      <div class="canvas-wrap"><canvas id="fallCanvas"></canvas></div>
+      <div class="meter">
+        <div class="play"><span class="v" id="fallTime">0.0s</span><div class="track"><i id="fallTrack"></i></div></div>
+        <span class="loop">↻ LOOP</span>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="flow">
+      <span class="node">ESP32 ×4</span><span>─ UDP ▸</span>
+      <span class="node">Jetson Orin</span><span>─ WebSocket ▸</span>
+      <span class="node">이 화면</span>
+    </div>
+    <div class="spacer" style="flex:1"></div>
+    <span>실시간 연결: <code id="wsHint">ws://192.168.0.15:8765</code></span>
+  </footer>
+</div>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<script>
+/* ===================================================================
+   설정 — JETSON_WS_URL 을 젯슨 주소로 바꾸면 실시간 연결, 실패 시 데모.
+   젯슨 메시지 형식(노드별로 보낼 것):
+     {"node":1, "amplitudes":[64개 숫자]}
+   node / node_id 둘 다 인식. 노드 번호가 없으면 노드 1로 들어갑니다.
+   amplitudes / csi / 배열 그대로 다 받습니다.
+=================================================================== */
+const JETSON_WS_URL = "";            // 예: "ws://192.168.0.15:8765" (비우면 데모 모드)
+const NODE_IDS = [1,2,3,4];
+const SUBCARRIERS = 64;
+const HISTORY = 160;
+document.getElementById('wsHint').textContent = JETSON_WS_URL || "ws://<젯슨-IP>:8765  (미설정 · 데모 모드)";
+
+/* 노드별 색조 (구분용) */
+const NODE_HUE = {1:172, 2:198, 3:140, 4:276};
+function scColor(i,n,base){const t=i/(n-1);return `hsl(${base+(t-0.5)*48} 72% ${46+16*Math.sin(t*Math.PI)}%)`;}
+
+/* ---- 노드 상태 객체 ---- */
+const nodes = {};
+const nodesEl = document.getElementById('nodes');
+NODE_IDS.forEach(id=>{
+  const hue = NODE_HUE[id];
+  const colors = Array.from({length:SUBCARRIERS},(_,i)=>scColor(i,SUBCARRIERS,hue));
+  const mean = `hsl(${hue} 80% 62%)`;
+  const sec = document.createElement('section');
+  sec.className='panel'; sec.dataset.on='0'; sec.style.setProperty('--nodec',mean);
+  sec.innerHTML = `
+    <div class="nhead">
+      <span class="ntag">노드 ${id}</span>
+      <span class="nstate"><span class="ndot"></span><span class="pps" id="pps${id}">— pps</span></span>
+    </div>
+    <div class="canvas-wrap"><canvas id="cv${id}"></canvas></div>`;
+  nodesEl.appendChild(sec);
+  nodes[id] = {
+    id, hue, colors, mean, el:sec, cv:sec.querySelector('canvas'),
+    ring:Array.from({length:HISTORY},()=>new Float32Array(SUBCARRIERS).fill(0.5)),
+    head:0, phase:Array.from({length:SUBCARRIERS},()=>Math.random()*6.28),
+    motion:0.1, motionTarget:0.1, frames:0, lastSec:performance.now(), pps:0, lastMsg:0
+  };
+});
+
+function fitCanvas(cv){
+  const r=cv.getBoundingClientRect(), dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {w:r.width,h:r.height,ctx};
+}
+const GRIDC=getComputedStyle(document.documentElement).getPropertyValue('--grid');
+function drawGrid(ctx,w,h){ctx.clearRect(0,0,w,h);ctx.strokeStyle=GRIDC;ctx.lineWidth=1;ctx.beginPath();
+  for(let gx=0;gx<=w;gx+=Math.max(36,w/8)){ctx.moveTo(gx,0);ctx.lineTo(gx,h);}
+  for(let gy=0;gy<=h;gy+=Math.max(26,h/4)){ctx.moveTo(0,gy);ctx.lineTo(w,gy);}ctx.stroke();}
+
+/* 데모 프레임: 노드마다 독립적으로 생성 */
+function genFrame(nd,t){
+  if(Math.random()<0.012) nd.motionTarget=0.3+Math.random()*0.6;
+  if(Math.random()<0.02)  nd.motionTarget=0.06+Math.random()*0.12;
+  nd.motion += (nd.motionTarget-nd.motion)*0.05;
+  const m=nd.motion, f=new Float32Array(SUBCARRIERS), off=nd.id*1.7;
+  for(let i=0;i<SUBCARRIERS;i++){
+    const base=0.5+0.12*Math.sin(i*0.35+t*0.0003+off);
+    const slow=0.06*Math.sin(t*0.0011+i*0.21+off);
+    const wob =m*0.33*Math.sin(t*0.006*(1+i*0.012)+nd.phase[i]);
+    const noise=(Math.random()-0.5)*0.04*(0.4+m);
+    f[i]=Math.max(0.02,Math.min(0.98,base+slow+wob+noise));
+  }
+  return f;
+}
+function pushFrame(nd,frame){
+  nd.ring[nd.head]=frame; nd.head=(nd.head+1)%HISTORY; nd.frames++;
+}
+function renderNode(nd){
+  const {w,h,ctx}=fitCanvas(nd.cv); drawGrid(ctx,w,h);
+  const pad=6, step=w/(HISTORY-1);
+  ctx.lineWidth=1; ctx.globalAlpha=0.5;
+  for(let s=0;s<SUBCARRIERS;s++){
+    ctx.beginPath(); ctx.strokeStyle=nd.colors[s];
+    for(let k=0;k<HISTORY;k++){const idx=(nd.head+k)%HISTORY;const v=nd.ring[idx][s];
+      const x=k*step,y=pad+(1-v)*(h-2*pad);k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1; ctx.lineWidth=2; ctx.strokeStyle=nd.mean; ctx.beginPath();
+  for(let k=0;k<HISTORY;k++){const fr=nd.ring[(nd.head+k)%HISTORY];let mn=0;for(let i=0;i<SUBCARRIERS;i++)mn+=fr[i];mn/=SUBCARRIERS;
+    const x=k*step,y=pad+(1-mn)*(h-2*pad);k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+}
+
+/* ===== 합성 예시 낙상 파형 (실측 아님) =====
+   고정 시드 난수로 만든 설명용 데이터입니다. 녹화된 CSI 클립이 아닙니다. */
+const FALL_FRAMES=160, FALL_ONSET=76, FALL_SETTLE=104;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd=mulberry(20260902);
+const FALL_COLORS=Array.from({length:SUBCARRIERS},(_,i)=>scColor(i,SUBCARRIERS,350));
+const fallClip=(()=>{const clip=[];const ph=Array.from({length:SUBCARRIERS},()=>rnd()*6.28);
+  for(let k=0;k<FALL_FRAMES;k++){const f=new Float32Array(SUBCARRIERS);let env;
+    if(k<FALL_ONSET)env=0.10;else if(k<FALL_SETTLE){const u=(k-FALL_ONSET)/(FALL_SETTLE-FALL_ONSET);env=0.10+Math.sin(u*Math.PI)*0.9;}else env=0.05;
+    for(let i=0;i<SUBCARRIERS;i++){const base=0.5+0.12*Math.sin(i*0.35);const wob=env*0.42*Math.sin(k*0.55*(1+i*0.02)+ph[i]);const noise=(rnd()-0.5)*0.05*(0.3+env);
+      f[i]=Math.max(0.02,Math.min(0.98,base+wob+noise));}clip.push(f);}return clip;})();
+const fallCv=document.getElementById('fallCanvas'); let fallHead=0;
+function renderFall(){
+  const {w,h,ctx}=fitCanvas(fallCv); drawGrid(ctx,w,h);
+  const pad=8,step=w/(FALL_FRAMES-1);
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--alert-dim');
+  ctx.fillRect(FALL_ONSET*step,0,(FALL_SETTLE-FALL_ONSET)*step,h);
+  ctx.lineWidth=1.1;ctx.globalAlpha=0.5;
+  for(let s=0;s<SUBCARRIERS;s++){ctx.beginPath();ctx.strokeStyle=FALL_COLORS[s];
+    for(let k=0;k<FALL_FRAMES;k++){const v=fallClip[k][s],x=k*step,y=pad+(1-v)*(h-2*pad);k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();}
+  ctx.globalAlpha=1;ctx.lineWidth=2.2;ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--alert');ctx.beginPath();
+  for(let k=0;k<FALL_FRAMES;k++){let mn=0;for(let i=0;i<SUBCARRIERS;i++)mn+=fallClip[k][i];mn/=SUBCARRIERS;const x=k*step,y=pad+(1-mn)*(h-2*pad);k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+  const mx=FALL_ONSET*step;ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--alert');ctx.globalAlpha=.8;ctx.setLineDash([4,4]);ctx.lineWidth=1.3;
+  ctx.beginPath();ctx.moveTo(mx,0);ctx.lineTo(mx,h);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.font='11px "IBM Plex Mono",monospace';ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--alert');ctx.fillText('낙상 발생',mx+6,15);
+  const px=fallHead*step;ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke();
+  document.getElementById('fallTime').textContent=((fallHead/FALL_FRAMES)*5).toFixed(1)+'s';
+  document.getElementById('fallTrack').style.width=(fallHead/FALL_FRAMES*100)+'%';
+}
+
+/* ===== 루프 & WebSocket ===== */
+let paused=false,lastT=performance.now(),fallAccum=0,wsConnected=false;
+const LIVE_HZ=32,FALL_HZ=32;
+const demoAccum={};NODE_IDS.forEach(id=>demoAccum[id]=0);
+
+function loop(now){
+  const dt=Math.min(100,now-lastT);lastT=now;
+  if(!paused){
+    NODE_IDS.forEach(id=>{
+      const nd=nodes[id];
+      if(!wsConnected){ demoAccum[id]+=dt;const per=1000/LIVE_HZ;
+        while(demoAccum[id]>=per){pushFrame(nd,genFrame(nd,now));demoAccum[id]-=per;} }
+      // pps 및 노드 연결표시 — 실시간 수신 중('1')일 때만 pps, 아니면 목업/대기
+      let tick=false;
+      if(now-nd.lastSec>=1000){nd.pps=nd.frames;nd.frames=0;nd.lastSec=now;tick=true;}
+      const on = wsConnected ? (now-nd.lastMsg<2000?'1':'0') : 'demo';
+      if(tick||nd.el.dataset.on!==on){
+        nd.el.dataset.on=on;
+        document.getElementById('pps'+id).textContent=on==='1'?nd.pps+' pps':(on==='0'?'대기':'목업');}
+    });
+    fallAccum+=dt;const fper=1000/FALL_HZ;while(fallAccum>=fper){fallHead=(fallHead+1)%FALL_FRAMES;fallAccum-=fper;}
+  }
+  NODE_IDS.forEach(id=>renderNode(nodes[id]));
+  renderFall();
+  requestAnimationFrame(loop);
+}
+
+let ws=null;
+function setStatus(s,t){document.getElementById('status').dataset.s=s;document.getElementById('statusText').textContent=t;}
+function connectWS(){
+  if(!JETSON_WS_URL){setStatus('demo','데모 모드 (목업 파형)');return;}
+  setStatus('wait','연결 시도 중…');
+  try{ws=new WebSocket(JETSON_WS_URL);}catch(e){setStatus('demo','데모 모드 (연결 실패)');return;}
+  // 연결되면 목업 이력을 지워 실측 파형과 섞이지 않게 함
+  ws.onopen=()=>{wsConnected=true;NODE_IDS.forEach(id=>nodes[id].ring.forEach(r=>r.fill(0.5)));setStatus('live','실시간 연결됨');};
+  ws.onclose=()=>{wsConnected=false;setStatus('demo','데모 모드 (연결 끊김)');};
+  ws.onerror=()=>{wsConnected=false;setStatus('demo','데모 모드 (연결 실패)');};
+  ws.onmessage=(ev)=>{
+    let d=null;try{d=JSON.parse(ev.data);}catch(_){return;}
+    const id = d.node ?? d.node_id ?? 1;
+    const nd = nodes[id]; if(!nd) return;
+    let amps = d.amplitudes || d.csi || (Array.isArray(d)?d:null) || (d.data&&d.data.amplitudes);
+    if(!amps) return;
+    const f=new Float32Array(SUBCARRIERS),n=Math.min(SUBCARRIERS,amps.length);
+    let mx=1e-6;for(let i=0;i<n;i++)mx=Math.max(mx,Math.abs(amps[i]));
+    for(let i=0;i<SUBCARRIERS;i++){const a=i<n?Math.abs(amps[i])/mx:0.5;f[i]=Math.max(0.02,Math.min(0.98,0.15+a*0.8));}
+    pushFrame(nd,f); nd.lastMsg=performance.now();
+  };
+}
+
+document.getElementById('pauseBtn').addEventListener('click',(e)=>{paused=!paused;e.currentTarget.textContent=paused?'▶ 재생':'❚❚ 일시정지';});
+window.addEventListener('resize',()=>{NODE_IDS.forEach(id=>renderNode(nodes[id]));renderFall();});
+connectWS();requestAnimationFrame(loop);
+</script>

@@ -1,14 +1,18 @@
 import 'dart:ui';
 
-enum SafetyStatus { normal, out, still, danger }
+// unknown: 엣지 모델을 쓸 수 없거나 입력이 오래되어 판단하지 못한 상태.
+// 정상(normal)으로도, 위험(danger)으로도 보여주지 않는다.
+enum SafetyStatus { normal, out, still, danger, unknown }
 
 SafetyStatus safetyStatusFrom(dynamic value) {
   final raw = value?.toString().toLowerCase().trim();
   return switch (raw) {
+    'normal' => SafetyStatus.normal,
     'danger' || 'fall' || 'fallen' || 'lying' => SafetyStatus.danger,
     'out' || 'exit' || 'intrusion' || 'entrance' => SafetyStatus.out,
     'still' || 'inactive' || 'sitting' || 'no_motion' => SafetyStatus.still,
-    _ => SafetyStatus.normal,
+    // 'unknown', 'model_unavailable', 'stale', 누락·미지원 값은 모두 판단 불가로 본다.
+    _ => SafetyStatus.unknown,
   };
 }
 
@@ -18,6 +22,7 @@ String safetyStatusToServer(SafetyStatus status) {
     SafetyStatus.out => 'out',
     SafetyStatus.still => 'still',
     SafetyStatus.danger => 'danger',
+    SafetyStatus.unknown => 'unknown',
   };
 }
 
@@ -113,13 +118,15 @@ double? optionalBoundedDouble(dynamic value, {double min = 0.0, double max = 1.0
   return clamped?.toDouble();
 }
 
-double breathingRateForStatus(SafetyStatus status) {
-  return switch (status) {
-    SafetyStatus.normal => 16.8,
-    SafetyStatus.out => 18.4,
-    SafetyStatus.still => 13.6,
-    SafetyStatus.danger => 23.8,
-  };
+/// 서버가 보낸 호흡수를 읽는다. 값이 없거나 `breathingEstimated: true`(측정값이 아님)이면
+/// null을 돌려주고, 화면에서는 숫자 대신 '측정 대기'로 보여준다.
+double? measuredBreathingRate(Map<String, dynamic> json) {
+  if (json['breathingEstimated'] == true) return null;
+  return optionalBoundedDouble(
+    json['breathingRate'] ?? json['respirationRate'] ?? json['breathRate'],
+    min: 6,
+    max: 36,
+  );
 }
 
 class Guardian {
@@ -152,7 +159,6 @@ class EmergencyInfo {
   const EmergencyInfo({
     required this.address,
     required this.accessNote,
-    required this.doorPassword,
     required this.medicalNote,
     required this.hospital,
   });
@@ -161,7 +167,6 @@ class EmergencyInfo {
     return EmergencyInfo(
       address: cleanText(json['address'], defaultInfo.address),
       accessNote: cleanText(json['accessNote'], defaultInfo.accessNote),
-      doorPassword: cleanText(json['doorPassword'], defaultInfo.doorPassword),
       medicalNote: cleanText(json['medicalNote'], defaultInfo.medicalNote),
       hospital: cleanText(json['hospital'], defaultInfo.hospital),
     );
@@ -170,21 +175,18 @@ class EmergencyInfo {
   static const defaultInfo = EmergencyInfo(
     address: '우리집',
     accessNote: '공동현관 호출 후 보호자에게 연락해 주세요.',
-    doorPassword: '',
     medicalNote: '고혈압 약 복용 중. 낙상 의심 시 무리하게 일으키지 말아 주세요.',
     hospital: '가까운 응급실: ○○병원 응급실',
   );
 
   final String address;
   final String accessNote;
-  final String doorPassword;
   final String medicalNote;
   final String hospital;
 
   Map<String, dynamic> toJson() => {
     'address': address,
     'accessNote': accessNote,
-    'doorPassword': doorPassword,
     'medicalNote': medicalNote,
     'hospital': hospital,
   };
@@ -208,6 +210,7 @@ class AlertEvent {
       'danger' || 'fall' => SafetyStatus.danger,
       'warning' || 'out' => SafetyStatus.out,
       'still' => SafetyStatus.still,
+      'unknown' => SafetyStatus.unknown,
       _ => SafetyStatus.normal,
     };
     final rawRoom = cleanText(json['room'], RoomResolver.unknown);
@@ -273,6 +276,16 @@ class AlertEvent {
         urgent: false,
         resolved: true,
       ),
+      SafetyStatus.unknown => AlertEvent(
+        id: DateTime.now().millisecondsSinceEpoch,
+        status: status,
+        title: '상태 확인 필요',
+        message: '판단에 쓸 센서·모델 입력이 없어 상태를 확인하지 못했어요.',
+        time: time,
+        room: room,
+        urgent: false,
+        resolved: false,
+      ),
     };
   }
 
@@ -307,7 +320,6 @@ class SafetySnapshot {
     required this.confidence,
     required this.breathingRate,
     required this.breathingConfidence,
-    required this.breathingEstimated,
     required this.locationSharingEnabled,
     required this.serverConnected,
     required this.connectionNote,
@@ -323,19 +335,20 @@ class SafetySnapshot {
   factory SafetySnapshot.initial() {
     final now = DateTime.now();
     return SafetySnapshot(
-      status: SafetyStatus.normal,
+      // 서버 값을 받기 전에는 정상으로 단정하지 않는다.
+      status: SafetyStatus.unknown,
       room: RoomResolver.living,
-      pose: 'standing',
+      pose: 'unknown',
       x: 0.34,
       y: 0.45,
       confidence: 0.86,
-      breathingRate: breathingRateForStatus(SafetyStatus.normal),
+      breathingRate: null,
       breathingConfidence: 0.72,
-      breathingEstimated: true,
       locationSharingEnabled: true,
       serverConnected: false,
       connectionNote: '상태를 확인하는 중',
-      dataSource: 'boot',
+      // 아직 받은 데이터가 없으므로 시연 데이터로도 표시하지 않는다.
+      dataSource: 'unknown',
       lastUpdated: now,
       movementPath: const [
         Offset(0.26, 0.42),
@@ -343,7 +356,7 @@ class SafetySnapshot {
         Offset(0.55, 0.72),
         Offset(0.76, 0.85),
       ],
-      alerts: [AlertEvent.fromStatus(SafetyStatus.normal, room: RoomResolver.living)],
+      alerts: const [],
       guardians: const [
         Guardian(id: 1, name: '김영희 어르신', phone: '010-0000-0000', role: '피보호자'),
         Guardian(id: 2, name: '홍길동 보호자', phone: '010-1234-5678', role: '1순위 보호자'),
@@ -368,9 +381,9 @@ class SafetySnapshot {
   final double x;
   final double y;
   final double confidence;
-  final double breathingRate;
+  // null이면 측정된 호흡수가 없다는 뜻이다. 화면에는 '측정 대기'로 표시한다.
+  final double? breathingRate;
   final double breathingConfidence;
-  final bool breathingEstimated;
   final bool locationSharingEnabled;
   final bool serverConnected;
   final String connectionNote;
@@ -429,26 +442,18 @@ class SafetySnapshot {
       x: normalizedDouble(json['x'], fallback.x),
       y: normalizedDouble(json['y'], fallback.y),
       confidence: normalizedDouble(json['confidence'], fallback.confidence),
-      breathingRate:
-          optionalBoundedDouble(
-            json['breathingRate'] ?? json['respirationRate'] ?? json['breathRate'],
-            min: 6,
-            max: 36,
-          ) ??
-          breathingRateForStatus(status),
+      breathingRate: measuredBreathingRate(json),
       breathingConfidence: normalizedDouble(
         json['breathingConfidence'] ?? json['respirationConfidence'],
         fallback.breathingConfidence,
       ),
-      breathingEstimated: json['breathingEstimated'] is bool
-          ? json['breathingEstimated'] as bool
-          : true,
       locationSharingEnabled: json['locationSharingEnabled'] is bool
           ? json['locationSharingEnabled'] as bool
           : fallback.locationSharingEnabled,
       serverConnected: false,
       connectionNote: '저장된 마지막 상태를 보여주는 중이에요',
-      dataSource: cleanText(json['dataSource'], fallback.dataSource),
+      // 저장된 값은 실시간 추론이 아니므로 원래 출처(jetson_orin 등) 대신 캐시로 표시한다.
+      dataSource: 'cache',
       lastUpdated: cachedTime ?? fallback.lastUpdated,
       movementPath: movementPath.isEmpty ? fallback.movementPath : movementPath,
       alerts: alerts,
@@ -467,7 +472,6 @@ class SafetySnapshot {
     'confidence': confidence,
     'breathingRate': breathingRate,
     'breathingConfidence': breathingConfidence,
-    'breathingEstimated': breathingEstimated,
     'locationSharingEnabled': locationSharingEnabled,
     'dataSource': dataSource,
     'lastUpdated': lastUpdated.toIso8601String(),
@@ -480,13 +484,18 @@ class SafetySnapshot {
     'settings': settings,
   };
 
-  bool get needsAttention => status != SafetyStatus.normal;
+  // 판단 불가(unknown)는 위험 대응 화면을 띄우지 않으므로 여기서 제외한다.
+  bool get needsAttention =>
+      status != SafetyStatus.normal && status != SafetyStatus.unknown;
   bool get isDanger => status == SafetyStatus.danger;
+  bool get isUnknown => status == SafetyStatus.unknown;
   bool get isLocationHidden => !locationSharingEnabled;
-  bool get isLiveSensorSource {
-    final source = dataSource.toLowerCase();
-    return source.contains('jetson') || source.contains('esp') || source.contains('sensor');
-  }
+
+  // 출처 값은 부분 문자열이 아니라 정확히 일치할 때만 인정한다.
+  // 'jetson_orin' = 실제 엣지 추론, 'scripted_demo' = 스크립트 시연 입력.
+  bool get isLiveSensorSource => dataSource == 'jetson_orin';
+  bool get isScriptedDemoSource =>
+      dataSource == 'scripted_demo' || dataSource == 'demo_sensor';
 
   String get levelLabel {
     return switch (status) {
@@ -494,6 +503,7 @@ class SafetySnapshot {
       SafetyStatus.out => '주의',
       SafetyStatus.still => '주의',
       SafetyStatus.danger => '위험',
+      SafetyStatus.unknown => '확인 필요',
     };
   }
 
@@ -503,6 +513,7 @@ class SafetySnapshot {
       SafetyStatus.out => '현관 접근 확인 필요',
       SafetyStatus.still => '장시간 움직임 부족',
       SafetyStatus.danger => '즉각 조치 필요',
+      SafetyStatus.unknown => '판단 입력 없음',
     };
   }
 
@@ -512,6 +523,7 @@ class SafetySnapshot {
       SafetyStatus.out => '현관 위치와 외출 여부를 먼저 확인해 주세요.',
       SafetyStatus.still => '전화나 메시지로 안부를 확인해 주세요.',
       SafetyStatus.danger => '즉시 연락하고, 응답이 없으면 119 신고 정보를 확인해 주세요.',
+      SafetyStatus.unknown => '센서·엣지 연결을 확인하고, 필요하면 직접 안부를 확인해 주세요.',
     };
   }
 
@@ -521,6 +533,7 @@ class SafetySnapshot {
       SafetyStatus.out => '주의: 현관 접근',
       SafetyStatus.still => '주의: 장시간 무반응',
       SafetyStatus.danger => '위험: 낙상 의심',
+      SafetyStatus.unknown => '확인 필요: 판단 입력 없음',
     };
   }
 
@@ -530,6 +543,7 @@ class SafetySnapshot {
       SafetyStatus.out => '현관 쪽 움직임이 있었어요',
       SafetyStatus.still => '오래 움직임이 적어요',
       SafetyStatus.danger => '즉각적인 조치가 필요해요',
+      SafetyStatus.unknown => '지금 상태를 판단할 수 없어요',
     };
   }
 
@@ -539,6 +553,7 @@ class SafetySnapshot {
       SafetyStatus.out => '$room 쪽 이동이 감지되었어요. 외출 여부를 확인해 주세요.',
       SafetyStatus.still => '$room에서 움직임이 적게 감지되었어요. 안부 확인이 필요해요.',
       SafetyStatus.danger => '$room에서 낙상 의심 움직임이 감지되었어요.',
+      SafetyStatus.unknown => '엣지 모델 결과가 없거나 오래되어 상태를 확인하는 중이에요.',
     };
   }
 
@@ -548,6 +563,7 @@ class SafetySnapshot {
       SafetyStatus.out => '위치 확인하기',
       SafetyStatus.still => '어르신께 연락하기',
       SafetyStatus.danger => '긴급 확인하기',
+      SafetyStatus.unknown => '연결 상태 확인하기',
     };
   }
 
@@ -556,6 +572,7 @@ class SafetySnapshot {
       'lying' || 'fallen' => '누워 있는',
       'sitting' => '앉아 있는',
       'walking' => '이동 중인',
+      'unknown' => '확인 필요',
       _ => '서 있는',
     };
   }
@@ -567,18 +584,23 @@ class SafetySnapshot {
   }
 
   bool get breathingNeedsAttention {
-    return status == SafetyStatus.danger ||
-        breathingRate < 12 ||
-        breathingRate > 22 ||
-        breathingConfidence < 0.55;
+    if (status == SafetyStatus.danger) return true;
+    final rate = breathingRate;
+    if (rate == null) return false;
+    return rate < 12 || rate > 22 || breathingConfidence < 0.55;
   }
 
-  String get breathingRateLabel => '${breathingRate.toStringAsFixed(1)}회/분';
+  String get breathingRateLabel {
+    final rate = breathingRate;
+    return rate == null ? '측정 대기' : '${rate.toStringAsFixed(1)}회/분';
+  }
 
   String get breathingStatusLabel {
     if (status == SafetyStatus.danger) return '호흡 확인 필요';
-    if (breathingRate < 12) return '일반 범위보다 느림';
-    if (breathingRate > 22) return '일반 범위보다 빠름';
+    final rate = breathingRate;
+    if (rate == null) return '호흡 측정 대기';
+    if (rate < 12) return '일반 범위보다 느림';
+    if (rate > 22) return '일반 범위보다 빠름';
     if (breathingConfidence < 0.55) return '신호 확인 중';
     return '안정적인 리듬';
   }
@@ -587,10 +609,14 @@ class SafetySnapshot {
     if (status == SafetyStatus.danger) {
       return '움직임 변화가 커서 호흡 리듬도 함께 확인하는 중이에요.';
     }
-    if (breathingRate < 12) {
+    final rate = breathingRate;
+    if (rate == null) {
+      return '아직 측정된 호흡 신호가 없어요. 측정값이 들어오면 여기에 보여드려요.';
+    }
+    if (rate < 12) {
       return '호흡이 일반적인 범위보다 느리게 보일 수 있어요. 몸 상태를 천천히 확인해 주세요.';
     }
-    if (breathingRate > 22) {
+    if (rate > 22) {
       return '호흡이 일반적인 범위보다 빠르게 보일 수 있어요. 잠시 앉아서 쉬어 주세요.';
     }
     if (breathingConfidence < 0.55) {
@@ -601,26 +627,34 @@ class SafetySnapshot {
 
   String get breathingAction {
     if (status == SafetyStatus.danger) return '통증이나 숨참이 있으면 바로 도움을 요청하세요.';
-    if (breathingRate < 12 || breathingRate > 22) return '불편함이 계속되면 보호자에게 알려 주세요.';
+    final rate = breathingRate;
+    if (rate == null) return '측정값이 들어오기 전까지는 호흡 안내를 하지 않아요.';
+    if (rate < 12 || rate > 22) return '불편함이 계속되면 보호자에게 알려 주세요.';
     if (breathingConfidence < 0.55) return '센서 주변에서 잠시 편하게 머물러 주세요.';
     return '편하게 호흡하면서 평소처럼 지내도 괜찮아요.';
   }
 
   String get breathingSourceLabel {
-    return breathingEstimated ? '시연용 예시값 (측정 대기)' : 'CSI 호흡 신호 수신';
+    if (breathingRate == null) return '호흡 신호 미수신';
+    if (isLiveSensorSource) return 'CSI 호흡 신호 수신';
+    if (isScriptedDemoSource) return '시연 입력값';
+    return '실측 여부 확인 필요';
   }
 
   String get dataSourceLabel {
-    final source = dataSource.toLowerCase().trim();
-    if (source.contains('jetson')) return 'Jetson 실시간 추론';
-    if (source.contains('esp')) return 'ESP32 수신 데이터';
-    if (source == 'sensor' || source.contains('sensor')) return '실제 센서 데이터';
-    if (source == 'admin') return '관리자 수동 입력';
-    if (source == 'app-demo' || source == 'scenario') return '앱 시연 데이터';
-    if (source == 'mock' || source == 'boot' || source == 'reset') return '시연용 mock 데이터';
-    if (source == 'care-recipient') return '피보호자 확인 응답';
-    if (source == 'cache') return '앱에 저장된 마지막 상태';
-    return cleanText(dataSource, '데이터 출처 확인 중');
+    return switch (dataSource) {
+      'jetson_orin' => 'Jetson 실시간 추론',
+      'scripted_demo' || 'demo_sensor' => '시연 입력',
+      'unknown' => '출처 미지정',
+      'sensor-waiting' => '센서 입력 대기',
+      'admin' => '관리자 수동 입력',
+      'app-demo' || 'scenario' => '앱 시연 데이터',
+      'mock' => '시연용 mock 데이터',
+      'boot' || 'reset' => '입력 대기',
+      'care-recipient' => '피보호자 확인 응답',
+      'cache' => '앱에 저장된 마지막 상태',
+      _ => cleanText(dataSource, '데이터 출처 확인 중'),
+    };
   }
 
   String get lastUpdatedText {
@@ -668,8 +702,8 @@ class SafetySnapshot {
     double? y,
     double? confidence,
     double? breathingRate,
+    bool clearBreathingRate = false,
     double? breathingConfidence,
-    bool? breathingEstimated,
     bool? locationSharingEnabled,
     bool? serverConnected,
     String? connectionNote,
@@ -688,9 +722,8 @@ class SafetySnapshot {
       x: x ?? this.x,
       y: y ?? this.y,
       confidence: confidence ?? this.confidence,
-      breathingRate: breathingRate ?? this.breathingRate,
+      breathingRate: clearBreathingRate ? null : (breathingRate ?? this.breathingRate),
       breathingConfidence: breathingConfidence ?? this.breathingConfidence,
-      breathingEstimated: breathingEstimated ?? this.breathingEstimated,
       locationSharingEnabled: locationSharingEnabled ?? this.locationSharingEnabled,
       serverConnected: serverConnected ?? this.serverConnected,
       connectionNote: connectionNote ?? this.connectionNote,
@@ -711,6 +744,7 @@ String poseFromStatus(SafetyStatus status) {
     SafetyStatus.out => 'walking',
     SafetyStatus.still => 'sitting',
     SafetyStatus.normal => 'standing',
+    SafetyStatus.unknown => 'unknown',
   };
 }
 

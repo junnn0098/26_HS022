@@ -11,6 +11,12 @@ class AppConfig {
     defaultValue: false,
   );
 
+  // 서버에 HANIUM_API_TOKEN을 설정한 경우에만 같은 값을 넘긴다. 비어 있으면 헤더를 보내지 않는다.
+  static const apiToken = String.fromEnvironment(
+    'API_TOKEN',
+    defaultValue: '',
+  );
+
   static const apiTimeout = Duration(milliseconds: 900);
   static const locationPollInterval = Duration(milliseconds: 350);
   static const healthPollInterval = Duration(seconds: 2);
@@ -23,6 +29,8 @@ class AppConfig {
     final wsBase = serverBaseUrl.startsWith('https://')
         ? serverBaseUrl.replaceFirst('https://', 'wss://')
         : serverBaseUrl.replaceFirst('http://', 'ws://');
-    return Uri.parse('$wsBase$path');
+    // 서버에 HANIUM_API_TOKEN이 설정된 경우 WebSocket은 헤더 대신 쿼리로 토큰을 보낸다.
+    final uri = Uri.parse('$wsBase$path');
+    return apiToken.isEmpty ? uri : uri.replace(queryParameters: {'token': apiToken});
   }
 }

@@ -7,11 +7,14 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.request
 
 
 SERVER_URL = "http://127.0.0.1:8000"
+# 서버를 HANIUM_API_TOKEN과 함께 실행했다면 같은 값을 환경 변수로 지정합니다.
+API_TOKEN = os.environ.get("HANIUM_API_TOKEN", "")
 
 
 SCENARIOS = [
@@ -23,7 +26,7 @@ SCENARIOS = [
             "status": "normal",
             "pose": "standing",
             "confidence": 0.88,
-            "source": "demo_sensor",
+            "source": "scripted_demo",
             "holdMs": 60000,
         },
     },
@@ -35,7 +38,7 @@ SCENARIOS = [
             "status": "out",
             "pose": "walking",
             "confidence": 0.88,
-            "source": "demo_sensor",
+            "source": "scripted_demo",
             "holdMs": 60000,
         },
     },
@@ -47,7 +50,7 @@ SCENARIOS = [
             "status": "danger",
             "pose": "lying",
             "confidence": 0.91,
-            "source": "demo_sensor",
+            "source": "scripted_demo",
             "holdMs": 60000,
         },
     },
@@ -59,7 +62,7 @@ SCENARIOS = [
             "status": "still",
             "pose": "sitting",
             "confidence": 0.83,
-            "source": "demo_sensor",
+            "source": "scripted_demo",
             "holdMs": 60000,
         },
     },
@@ -68,10 +71,13 @@ SCENARIOS = [
 
 def post_json(path: str, payload: dict) -> dict:
     data = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if API_TOKEN:
+        headers["Authorization"] = f"Bearer {API_TOKEN}"
     request = urllib.request.Request(
         f"{SERVER_URL}{path}",
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=5) as response:

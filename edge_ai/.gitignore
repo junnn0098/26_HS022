@@ -10,6 +10,8 @@
 *.npy
 *.pt
 *.pth
+# Small team/v1 checkpoints are published with the code
+!/hanium_fall_v1/weights/*.pth
 *.onnx
 *.engine
 *.log

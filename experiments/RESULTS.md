@@ -1,8 +1,10 @@
-# 소프트웨어 실험 결과 — 2026-10-18
+# 합성 입력 기반 소프트웨어 검증 결과
 
-기준 코드는 문서 PR #1이 병합된 `b3bc7e4`입니다. 실제 실행 환경·설정·입력 파일 해시는 [environment.json](results/2026-10-18/environment.json), 실행 방법은 [실험 안내](README.md)에 있습니다. 아래 결과는 센서·학습 가중치 없이 얻은 소프트웨어 검증 자료입니다.
+센서와 학습 가중치 없이 합성 입력으로 상태기계, 호흡 추정기, 패킷·노드 누락 처리, 서버 연동이 정한 대로 동작하는지 확인한 결과입니다. 낙상 감지 모델의 성능은 이 문서가 아니라 [실측 데이터 검증 결과](MEASURED_RESULTS.md)에 있습니다. 실행 방법은 [실험 안내](README.md)에 있습니다.
 
-## 1. 낙상 판정 시나리오
+1~3절은 2026-10-18에 `b3bc7e4`에서 실행한 결과이며, 실행 환경·설정·입력 파일 해시는 [environment.json](results/2026-10-18/environment.json)에 있습니다. 이 결과에 쓰인 `edge_ai/hanium_fall_v2`의 모듈 4개(`config.py`, `fall_state.py`, `features.py`, `respiratory.py`)와 [시나리오 파일](fall_scenarios.json)은 2026-10-19 현재도 기록된 해시(LF 기준)와 같으므로 1~3절 결과는 현재 코드에 그대로 해당합니다. 4절의 서버 연동은 현재 서버 코드로 2026-10-19에 다시 확인했습니다.
+
+## 1. 낙상 상태기계 시나리오
 
 0.5초마다 사람이 정한 행동 확률을 상태기계에 넣었습니다. 기본 확률은 지정 행동 0.9, `other_motion` 0.1이며, 저품질·빈 방 시나리오만 품질·인원 조건을 변경했습니다. 모델 추론을 통과한 입력이 아닙니다.
 
@@ -61,22 +63,25 @@
 
 ## 4. 서버 연동과 기존 검사
 
-임시 Node.js 서버와 Python 연결 클라이언트에 합성 JSON을 전달했습니다. 서버 사본의 수신 주소만 loopback으로 제한했으며 Firebase 설정이나 실제 사용자 상태는 사용하지 않았습니다.
+임시 로컬 서버(`local_server.js`)와 Python 연결 클라이언트(`jetson_edge_client.py`)에 합성 `live-status` JSON을 전달했습니다. 서버는 `127.0.0.1`에만 바인딩했고 Firebase 설정·API 토큰·실제 사용자 상태는 사용하지 않았습니다.
 
 | 관측 항목 | 결과 |
 |---|---|
+| 입력 전 초기 상태 | `unknown` (앱 표시: 확인 필요) |
 | 확정 경보 입력 | `danger` 전달 |
 | 호흡값 18.2 입력 | 18.2 유지, `breathingEstimated=false` |
-| 모델 미설치 입력 | `normal`로 전달되는 문제 재현 |
-| 호흡값 누락 | 연결 클라이언트는 생략하지만 서버가 16.8을 보충, 예시값 플래그 참 |
-| `unix_time=1`인 오래된 상태 | 전송이 수락되는 문제 재현 |
+| 모델 미설치(`model_unavailable`) 입력 | 연결 클라이언트와 서버 모두 `unknown` |
+| 호흡값 누락 | 연결 클라이언트는 생략하고 서버도 `breathingRate: null`, `breathingEstimated=false` |
+| `unix_time=1`인 오래된 결과 | 연결 클라이언트가 결과 대신 `unknown`을 보내고 `[stale]` 출력·종료 코드 1, 서버 상태는 `unknown` |
 
-숫자 18.2도 실측값이 아닌 주입한 예시값입니다. 플래그 전달은 확인했지만 Flutter 화면과 FCM 단말 수신은 이번 실험에 포함하지 않았습니다. 알려진 문제의 재현은 배포 기준 통과와 구분합니다.
+기대 항목 13개가 모두 관측값과 일치했습니다. 숫자 18.2는 실측값이 아니라 주입한 예시값이며, Flutter 화면과 FCM 단말 수신은 이 검사에 포함하지 않았습니다.
 
-기존 단위 테스트는 31개 중 **25개 통과·6개 건너뜀**입니다. PyTorch 관련 항목을 실행하지 않았으며, 자체 점검도 `TORCH_MODELS=SKIPPED`를 기록했습니다. 원래 테스트의 건너뜀 사유에 적힌 “Jetson에서 검사” 문구는 테스트 코드의 문자열일 뿐, 이번에 Jetson 검사를 했다는 뜻이 아닙니다.
+2026-10-18의 [수정 전 관측](results/2026-10-18/server_bridge.json)(파일 이름 변경 전 `dev_mock_server.js`)에서는 모델 미설치 입력이 `normal`로 전달되고, 누락 호흡값을 서버가 16.8로 채웠으며, 오래된 결과가 그대로 전송됐습니다. 위 표는 이 세 가지를 고친 뒤의 결과입니다.
 
-[서버 관측 JSON](results/2026-10-18/server_bridge.json) · [테스트 전체 로그](results/2026-10-18/unit_tests.txt) · [자체 점검 로그](results/2026-10-18/selftest.txt)
+2026-10-18 실행에서 `edge_ai/tests` 단위 테스트는 31개 중 **25개 통과·6개 건너뜀**입니다. PyTorch가 설치되지 않아 관련 항목을 건너뛰었고, 자체 점검도 `TORCH_MODELS=SKIPPED`를 기록했습니다. 건너뜀 사유의 `PyTorch is tested on the Jetson target`은 테스트 코드의 문자열이며, 이때 Jetson 검사를 했다는 뜻은 아닙니다. 현재 테스트 결과는 [확인 기록](../docs/IMPLEMENTATION_STATUS.md#확인-기록)에 있습니다.
 
-## 후속 실험에 필요한 자료
+[서버 관측 JSON](results/2026-10-19/server_bridge.json) · [테스트 전체 로그](results/2026-10-18/unit_tests.txt) · [자체 점검 로그](results/2026-10-18/selftest.txt)
 
-현재 가중치·평가 분할·원본 CSI·기준 호흡값·단말 알림 수신 기록이 준비되면 [실환경 평가 절차](../docs/validation/EVALUATION_PROTOCOL.md)를 적용합니다. 합성 신호 오차를 학습 모델의 실환경 성능으로 사용하지 않습니다.
+## 남은 평가
+
+낙상 모델의 실측 평가는 [실측 데이터 검증 결과](MEASURED_RESULTS.md)에 있습니다. 기준 장치로 잰 호흡값과 보호자 단말의 알림 수신 기록은 아직 없으므로, 호흡 정확도와 센서부터 단말까지의 전체 지연은 [실환경 평가 절차](../docs/validation/EVALUATION_PROTOCOL.md)에 따라 따로 평가합니다. 합성 신호 오차를 학습 모델의 실환경 성능으로 사용하지 않습니다.

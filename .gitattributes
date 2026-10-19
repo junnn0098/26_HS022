@@ -1,0 +1,16 @@
+# Normalise text files to LF in the repository
+* text=auto
+
+# Scripts that run on the Jetson / Node server must stay LF even on a Windows checkout
+*.sh text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.service.in text eol=lf
+
+# Binary files: never convert line endings or diff as text
+*.png binary
+*.jpg binary
+*.pth binary
+*.npz binary
+*.wav binary
+*.ico binary

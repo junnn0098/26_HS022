@@ -192,7 +192,7 @@ class _FigmaHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final badgeLabel = snapshot.isLocationHidden
         ? '위치 비공개'
-        : snapshot.needsAttention
+        : snapshot.needsAttention || snapshot.isUnknown
         ? '확인 필요'
         : '안정적';
 
@@ -224,6 +224,10 @@ class _FigmaHeader extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              if (snapshot.isScriptedDemoSource) ...[
+                const SizedBox(height: 8),
+                const DemoInputChip(),
+              ],
             ],
           ),
         ),

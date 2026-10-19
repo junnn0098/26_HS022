@@ -79,7 +79,7 @@ def run_epoch(model, loader, device, activity_loss, count_loss, optimizer=None):
 def main() -> int:
     parser = argparse.ArgumentParser(description="Train Hanium RuView Fall V2")
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, default=Path("models/run_v1"))
+    parser.add_argument("--output-dir", type=Path, default=Path("models/v2_run"))
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
@@ -174,6 +174,7 @@ def main() -> int:
             best_macro_f1 = score
             stale_epochs = 0
             checkpoint = {
+                # ".v1" is the checkpoint schema version, not the model generation (this is the v2 model).
                 "schema": "hanium.ruview.model-checkpoint.v1",
                 "model_state_dict": model.state_dict(),
                 "model_config": model_config,
