@@ -13,7 +13,7 @@ PyTorch와 데이터셋 파일이 필요합니다. 내려받기와 실행 순서
 
 | 스크립트 | 하는 일 | 결과 위치 |
 |---|---|---|
-| [`run_v1_experiments.py`](run_v1_experiments.py) | v1 모델(`CSI1DCNN`, 134채널 × 500)을 1·2차 수집 1,019개(`b1_random`)와 전체 2,217개(`random_all`)에서 윈도우 무작위 80/20, 시드 5회로 학습·평가 | [`results/v1/`](results/v1) |
+| [`run_v1_experiments.py`](run_v1_experiments.py) | v1 모델(`CSI1DCNN`, 134채널 × 500)을 기본 동작 세트(11종) 1,019개(`b1_random`)와 전체 동작 세트(15종) 2,217개(`random_all`)에서 윈도우 무작위 80/20, 시드 5회로 학습·평가 | [`results/v1/`](results/v1) |
 | [`make_results_table.py`](make_results_table.py) | 결과 표와 동작별 오탐 표를 출력 | 표준 출력 |
 | [`plot_figures.py`](plot_figures.py) | 데이터셋 구성 그림과 v1 결과 그림 | [`../dataset/figures/`](../dataset/figures), [`results/figures/`](results/figures) |
 

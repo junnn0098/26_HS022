@@ -18,7 +18,7 @@
 
 ## 데이터와 분할
 
-모든 분할은 [`windows.csv`](../../dataset/metadata/windows.csv)의 출처 열로 정합니다. 윈도우마다 출처 녹화(`recording`), 녹화 안의 순번(`chunk_index`), 수집일(`date`), 시작·끝 시각(`ts_start_utc`, `ts_end_utc`)을 기록했고, [`export_windows.py`](../../dataset/tools/export_windows.py)로 팀 학습 파일의 2,217개 윈도우와 값이 모두 일치함을 확인했습니다([데이터셋 설명서](../../dataset/README.md#학습-윈도우를-만든-과정)).
+모든 분할은 [`windows.csv`](../../dataset/metadata/windows.csv)의 출처 열로 정합니다. 윈도우마다 출처 녹화(`recording`), 녹화 안의 순번(`chunk_index`), 시작·끝 시각(`ts_start_utc`, `ts_end_utc`)을 기록했고, [`export_windows.py`](../../dataset/tools/export_windows.py)로 팀 학습 파일의 2,217개 윈도우와 값이 모두 일치함을 확인했습니다([데이터셋 설명서](../../dataset/README.md#학습-윈도우를-만든-과정)).
 
 공개한 v1 결과는 다음 절차로 만들었습니다.
 
@@ -28,11 +28,11 @@
 | 분할 | [`train.py`](../../edge_ai/hanium_fall_v1/train.py) `--protocol random`: 라벨별 층화 윈도우 무작위 80/20 |
 | 반복 | 시드 5개(0–4). 지표는 평균 ± 표준편차, 검출 수는 반복 합산 |
 | 판정 | 낙상 확률 0.5 이상을 낙상으로 판정. 임계값에 무관한 AUROC를 함께 보고 |
-| 평가 세트 | 1·2차 수집(07-08·07-09) 1,019개 윈도우 → [`b1_random`](../../experiments/results/v1/b1_random), 전체 2,217개 윈도우 → [`random_all`](../../experiments/results/v1/random_all) |
+| 평가 세트 | 기본 동작 세트(11종) 1,019개 윈도우 → [`b1_random`](../../experiments/results/v1/b1_random), 전체 동작 세트(15종) 2,217개 윈도우 → [`random_all`](../../experiments/results/v1/random_all) |
 | 실행 | `python experiments/run_v1_experiments.py` |
 
 - 동작별 낙상 판정 비율은 `runs.json`의 `per_label`에 기록합니다. 비틀거리기(`stumble_no_fall`) 같은 혼동 동작의 오경보를 여기서 확인합니다.
-- `train.py`는 녹화 단위(`--protocol recording`, 녹화를 5겹에 배정)와 날짜 단위(`--protocol temporal`) 분할 옵션도 제공합니다.
+- `train.py`는 녹화 단위(`--protocol recording`, 녹화를 5겹에 배정)와 수집 배치 단위(`--protocol temporal`) 분할 옵션도 제공합니다.
 
 ## 데이터 수집 계획
 

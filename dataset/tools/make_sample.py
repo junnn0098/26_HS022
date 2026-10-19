@@ -3,7 +3,7 @@
   sample/csi134_sample.npz    라벨마다 윈도우 1개 (X: float32 (15, 500, 134), window_id)
   sample/sample_windows.csv   위 윈도우의 메타데이터 (windows.csv와 같은 열, npz_file/npz_index는 샘플 기준)
   sample/raw/                 낙상 녹화 1건에서 2초 분량의 원본 CSI와 같은 시간대의 관절 좌표,
-                              실시간 추론 재생 시연용 07-08 낙상 녹화 12초 (.csi.jsonl.gz)
+                              실시간 추론 재생 시연용 낙상 녹화 12초 (.csi.jsonl.gz)
 
   python dataset/tools/make_sample.py --ruview <RuView 폴더>
 """
@@ -22,7 +22,7 @@ import numpy as np
 DATASET = Path(__file__).resolve().parents[1]
 RAW_WINDOW = "b4_0728_0300"
 RAW_SECONDS = 2.0
-REPLAY_RECORDING = "csi-1783443615"  # 07-08 fall recording with 134-wide packets
+REPLAY_RECORDING = "csi-1783443615"  # fall recording with 134-wide packets
 REPLAY_SECONDS = (60.0, 72.0)
 
 

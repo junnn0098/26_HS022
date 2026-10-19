@@ -3,7 +3,7 @@
 Split protocols
   random     label-stratified 80/20 split of windows
   recording  5-fold split by recording: no recording appears in both train and test
-  temporal   train on the 2026-07-08..07-15 batches, test on the 07-24 and 07-28 batches
+  temporal   train on the earlier collection batches (TEMPORAL_TRAIN), test on the later ones (TEMPORAL_TEST)
 
 Examples (from edge_ai/)
   python -m hanium_fall_v1.train --protocol random --channels all --seeds 0 1 2 3 4 --out ../experiments/results/v1/random_all

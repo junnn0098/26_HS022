@@ -7,10 +7,10 @@
 | 항목 | 저장소 위치 | 내용 |
 |---|---|---|
 | 1D-CNN 모델 | [`edge_ai/hanium_fall_v1/model.py`](../edge_ai/hanium_fall_v1/model.py) | `CSI1DCNN`, 134채널 × 500패킷 입력, 낙상/비낙상 2분류 |
-| 팀 학습 가중치 | [`edge_ai/hanium_fall_v1/weights/`](../edge_ai/hanium_fall_v1/weights) | 팀 학습 가중치 2개(`team_v1_0717.pth`, `team_v1_0803.pth`). SHA-256은 [v1 설명서](../edge_ai/hanium_fall_v1/README.md)에 기록 |
-| 학습·평가·실시간 추론 | [`train.py`](../edge_ai/hanium_fall_v1/train.py), [`evaluate.py`](../edge_ai/hanium_fall_v1/evaluate.py), [`realtime_inference.py`](../edge_ai/hanium_fall_v1/realtime_inference.py) | 라벨별 층화 윈도우 무작위 분할, 녹화 단위·날짜 단위 분할 옵션. 테스트 [`test_v1.py`](../edge_ai/tests/test_v1.py) |
-| 학습 데이터 | [`dataset/`](../dataset/README.md) | 녹화 48건(3주간 5회), 500패킷 윈도우 2,217개(낙상 969개), 동작 15종. 대용량 파일은 GitHub Release `dataset-v1.0` |
-| 학습 결과 | [`experiments/MEASURED_RESULTS.md`](../experiments/MEASURED_RESULTS.md) | 윈도우 무작위 80/20 5회 반복 결과(1·2차 수집 1,019개, 전체 2,217개), 윈도우별 예측 CSV, 재현 명령 |
+| 팀 학습 가중치 | [`edge_ai/hanium_fall_v1/weights/`](../edge_ai/hanium_fall_v1/weights) | 팀 학습 가중치 2개(`.pth`, 각 273KB). 파일명과 SHA-256은 [v1 설명서](../edge_ai/hanium_fall_v1/README.md)에 기록 |
+| 학습·평가·실시간 추론 | [`train.py`](../edge_ai/hanium_fall_v1/train.py), [`evaluate.py`](../edge_ai/hanium_fall_v1/evaluate.py), [`realtime_inference.py`](../edge_ai/hanium_fall_v1/realtime_inference.py) | 라벨별 층화 윈도우 무작위 분할, 녹화 단위·수집 배치 단위 분할 옵션. 테스트 [`test_v1.py`](../edge_ai/tests/test_v1.py) |
+| 학습 데이터 | [`dataset/`](../dataset/README.md) | 녹화 48건, 500패킷 윈도우 2,217개(낙상 969개), 동작 15종. 대용량 파일은 GitHub Release `dataset-v1.0` |
+| 학습 결과 | [`experiments/MEASURED_RESULTS.md`](../experiments/MEASURED_RESULTS.md) | 기본 동작 세트(11종) 1,019개와 전체 동작 세트(15종) 2,217개의 윈도우 무작위 80/20 5회 반복 결과, 윈도우별 예측 CSV, 재현 명령 |
 | v2 실시간 모델 | [`edge_ai/hanium_fall_v2/`](../edge_ai/hanium_fall_v2) | 다중 노드 모델 구조, 학습·평가 코드, 체크포인트 호환 검사 |
 
 ## 입력 규격

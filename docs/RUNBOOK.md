@@ -29,14 +29,14 @@ cd app
 flutter test
 ```
 
-- 평가 명령은 [`dataset/sample`](../dataset/sample)의 윈도우 15개(라벨마다 1개)에 팀 학습 가중치를 적용해 전체·수집일별·동작별 지표를 JSON으로 출력합니다. 샘플이 15개뿐이므로 출력 수치는 실행 확인용입니다. 학습 결과는 [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
+- 평가 명령은 [`dataset/sample`](../dataset/sample)의 윈도우 15개(라벨마다 1개)에 팀 학습 가중치를 적용해 전체·수집 배치별·동작별 지표를 JSON으로 출력합니다. 샘플이 15개뿐이므로 출력 수치는 실행 확인용입니다. 학습 결과는 [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
 - `edge_ai` 단위 테스트는 PyTorch가 없으면 모델·실시간·분할 테스트를 건너뜁니다.
 - Windows에서 `flutter test`를 처음 실행할 때 개발자 모드(심볼릭 링크 허용)를 요구할 수 있습니다. 확인한 환경은 Flutter 3.47.2입니다.
 - 서버 테스트는 Node.js가 필요하며, 서버를 임시 폴더에 복사해 띄우고 끝나면 종료하므로 `app/server/dev_state.json`을 건드리지 않습니다.
 
 ### 녹화 재생으로 v1 실시간 추론 확인
 
-센서 노드 대신 저장소의 07-08 낙상 녹화 12초를 UDP로 재생해, 실시간 경로가 패킷을 받아 0.5초마다 낙상 확률을 계산하는지 봅니다. 두 터미널에서 `edge_ai/` 기준으로 실행합니다.
+센서 노드 대신 저장소의 낙상 녹화 12초를 UDP로 재생해, 실시간 경로가 패킷을 받아 0.5초마다 낙상 확률을 계산하는지 봅니다. 두 터미널에서 `edge_ai/` 기준으로 실행합니다.
 
 ```bash
 python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --host 127.0.0.1
@@ -200,7 +200,7 @@ python -m pip install -r experiments/requirements.txt   # 그림용 matplotlib
 python experiments/plot_figures.py                      # 데이터셋·결과 그림
 ```
 
-- `run_v1_experiments.py`는 v1 1D-CNN 모델을 라벨별 층화 윈도우 무작위 80/20 분할로 5회 반복 학습·평가합니다. 1·2차 수집(07-08·07-09) 1,019개 윈도우는 `experiments/results/v1/b1_random/`, 전체 2,217개 윈도우는 `experiments/results/v1/random_all/`에 덮어씁니다. 하나만 돌리려면 `--only b1_random`처럼 실행 이름을 지정합니다.
+- `run_v1_experiments.py`는 v1 1D-CNN 모델을 라벨별 층화 윈도우 무작위 80/20 분할로 5회 반복 학습·평가합니다. 기본 동작 세트(11종) 1,019개 윈도우 결과는 `experiments/results/v1/b1_random/`, 전체 동작 세트(15종) 2,217개 윈도우 결과는 `experiments/results/v1/random_all/`에 덮어씁니다. 하나만 돌리려면 `--only b1_random`처럼 실행 이름을 지정합니다.
 - 결과 폴더마다 `summary.json`(평균·표준편차·실행 환경), `runs.json`(반복별 지표), `predictions.csv`(윈도우별 낙상 확률)가 있습니다. 공개한 결과는 기본값 `--threads 2`로 만들었으며, 스레드 수를 바꾸면 소수 셋째 자리에서 차이가 날 수 있습니다.
 - `plot_figures.py`는 데이터셋 구성 그림과 결과 그림(`experiments/results/figures/v1_results.png`)을 그립니다.
 - 결과 표와 설명은 [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.

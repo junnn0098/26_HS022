@@ -1,8 +1,8 @@
 """Train and evaluate the v1 1D-CNN (134ch x 500) on the measured dataset.
 
 Two runs, both with a label-stratified 80/20 window split repeated over 5 seeds:
-  b1_random   1st and 2nd collection (b1_0708_0709, 1,019 windows)
-  random_all  all collection days (2,217 windows)
+  b1_random   basic action set (11 actions, 1,019 windows)
+  random_all  full action set (15 actions, 2,217 windows)
 
 Needs the dataset NPZ files in dataset/data (python dataset/tools/download.py) and
 PyTorch. Results go to experiments/results/v1/<run>/ and take about 5 minutes on CPU

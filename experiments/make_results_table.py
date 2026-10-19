@@ -22,8 +22,8 @@ WINDOWS = ROOT / "dataset" / "metadata" / "windows.csv"
 
 # name, table-1 title, table-2 column title
 RUNS = [
-    ("b1_random", "1·2차 수집 (07-08·07-09) 1,019개", "1·2차 수집 1,019개"),
-    ("random_all", "전체 (07-08–07-28) 2,217개", "전체 2,217개"),
+    ("b1_random", "기본 동작 세트(11종) 1,019개", "기본 세트 1,019개"),
+    ("random_all", "전체 동작 세트(15종) 2,217개", "전체 세트 2,217개"),
 ]
 METRICS = ("recall", "precision", "f1", "auroc")
 CATEGORY_ORDER = {"confusing": 0, "daily": 1}

@@ -21,8 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 SURFACE, INK, INK_2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 CATEGORY = {"daily": ("일상 동작", "#2a78d6"), "confusing": ("혼동 동작", "#1baf7a"), "fall": ("낙상", "#eb6834")}
-BATCH_NAME = {"b1_0708_0709": "07-08·07-09\n(1·2차)", "b2_0715": "07-15\n(낙상 보강)",
-              "b3_0724": "07-24\n(3차)", "b4_0728": "07-28\n(4차)"}
+CATEGORY_ORDER = ("fall", "confusing", "daily")
 
 KOREAN_FONTS = ["Malgun Gothic", "AppleGothic", "NanumGothic", "Noto Sans CJK KR", "Noto Sans KR"]
 _installed = {font.name for font in matplotlib.font_manager.fontManager.ttflist}
@@ -42,36 +41,43 @@ def windows() -> list[dict]:
 
 
 def composition(rows: list[dict], out: Path) -> None:
-    counts = Counter((row["batch"], row["category"]) for row in rows)
-    batches = list(BATCH_NAME)
-    fig, ax = plt.subplots(figsize=(7.2, 2.9))
-    left = np.zeros(len(batches))
-    for key, (name, color) in CATEGORY.items():
-        values = np.array([counts[(batch, key)] for batch in batches])
-        ax.barh(range(len(batches)), values, left=left, color=color, edgecolor=SURFACE, linewidth=2,
-                height=0.62, label=name)
-        for i, value in enumerate(values):
-            if value >= 60:
-                ax.text(left[i] + value / 2, i, f"{value}", ha="center", va="center", color="white", fontsize=9)
-        left += values
-    for i, total in enumerate(left):
-        ax.text(total + 12, i, f"{int(total)}개", va="center", color=INK_2, fontsize=9)
-    ax.set_yticks(range(len(batches)), [BATCH_NAME[b] for b in batches])
+    """Window count per action (label_ko), coloured by category, sorted by category then count."""
+    counts = Counter((row["category"], row["label_ko"]) for row in rows)
+    actions = sorted(counts, key=lambda key: (CATEGORY_ORDER.index(key[0]), -counts[key], key[1]))
+    # a half-row gap between category groups
+    y, positions = 0.0, []
+    for i, (category, _) in enumerate(actions):
+        if i and category != actions[i - 1][0]:
+            y += 0.5
+        positions.append(y)
+        y += 1
+    values = np.array([counts[key] for key in actions])
+    fig, ax = plt.subplots(figsize=(7.2, 5.4))
+    for key in CATEGORY_ORDER:
+        name, color = CATEGORY[key]
+        index = [i for i, (category, _) in enumerate(actions) if category == key]
+        ax.barh([positions[i] for i in index], values[index], color=color, edgecolor=SURFACE, linewidth=2,
+                height=0.72, label=name)
+    for pos, value in zip(positions, values):
+        ax.text(value + 10, pos, f"{value:,}", va="center", color=INK_2, fontsize=9)
+    ax.set_yticks(positions, [label for _, label in actions])
     ax.invert_yaxis()
-    ax.set_xlim(0, left.max() * 1.12)
+    ax.set_xlim(0, values.max() * 1.1)
     ax.set_xlabel("5초 윈도우 수")
     ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
-    ax.legend(ncols=3, frameon=False, loc="lower center", bbox_to_anchor=(0.45, 1.0))
-    ax.set_title("수집일별 학습 윈도우 구성 (총 2,217개, 낙상 969개)", loc="left", fontsize=11, pad=24)
+    ax.tick_params(axis="y", length=0)
+    ax.legend(ncols=3, frameon=False, loc="lower left", bbox_to_anchor=(0.0, 1.0))
+    falls = sum(row["is_fall"] == "1" for row in rows)
+    ax.set_title(f"동작별 학습 윈도우 구성 (총 {len(rows):,}개, 낙상 {falls:,}개)", loc="left", fontsize=11, pad=24)
     fig.savefig(out)
     plt.close(fig)
 
 
-V1_RUNS = [("b1_random", "1·2차 수집 (07-08·07-09) 1,019개", "#2a78d6"),
-           ("random_all", "전체 (07-08–07-28) 2,217개", "#eb6834")]
+V1_RUNS = [("b1_random", "기본 동작 세트 (11종) 1,019개", "#2a78d6"),
+           ("random_all", "전체 동작 세트 (15종) 2,217개", "#eb6834")]
 V1_METRICS = [("recall", "낙상 재현율"), ("precision", "정밀도"), ("f1", "F1"), ("auroc", "AUROC")]
 
 
