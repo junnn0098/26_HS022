@@ -36,7 +36,7 @@ CHANNELS = 134
 ROWS_PER_WINDOW = 25  # paired 조각 1개 = 20프레임
 KST = timezone(timedelta(hours=9))
 
-# 팀이 실제로 학습 파일을 만들 때 사용한 (라벨표, 결과 파일) 조합
+# 팀이 학습 파일을 만들 때 사용한 (라벨표, 결과 파일) 조합
 BATCHES = [
     ("b1_0708_0709", "labels.csv", "final_dataset_134ch.jsonl"),
     ("b2_0715", "labels_batch3_filtered.csv", "final_dataset_134ch_batch3_clean.jsonl"),

@@ -75,7 +75,7 @@ void main() {
     expect(find.text('사용할 역할을 선택하세요'), findsOneWidget);
     expect(find.text('보호자'), findsOneWidget);
     expect(find.text('피보호자'), findsOneWidget);
-    expect(find.text('시연용 역할 선택 (계정 인증 미구현)'), findsOneWidget);
+    expect(find.text('역할 선택'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
   });
 

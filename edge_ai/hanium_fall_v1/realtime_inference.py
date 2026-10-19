@@ -4,7 +4,7 @@ This mirrors how the training windows were built (RuView align-ground-truth.js +
 convert_for_ai_team_134ch_v3.py): every packet is one frame regardless of which
 node sent it, only packets whose width equals the session's modal width are kept,
 and amplitudes are read starting two bytes into the payload after the 8-byte
-prefix. The first channels therefore contain header bytes; see data.py.
+prefix, so channels 0-4 hold packet metadata; see data.py.
 
   python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all
 """

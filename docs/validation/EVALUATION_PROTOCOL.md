@@ -1,16 +1,16 @@
 # 평가 절차
 
-모델·낙상 이벤트·호흡·알림을 평가할 때 따르는 절차입니다. 실측 데이터로 낸 현재 결과는 [실측 데이터 검증 결과](../../experiments/MEASURED_RESULTS.md), 합성 입력으로 한 소프트웨어 검사는 [소프트웨어 실험 결과](../../experiments/RESULTS.md)에 있습니다.
+모델·낙상 이벤트·호흡·알림을 평가할 때 따르는 절차입니다. 실측 데이터로 학습한 모델 결과는 [실측 데이터 학습 결과](../../experiments/MEASURED_RESULTS.md), 합성 입력으로 한 시스템 점검은 [합성 입력 기반 소프트웨어 검증 결과](../../experiments/RESULTS.md)에 있습니다.
 
-## 평가 단계와 현재 자료
+## 평가 단계와 자료
 
-| 단계 | 평가 대상 | 필요한 증거 | 현재 자료 |
+| 단계 | 평가 대상 | 필요한 증거 | 자료 |
 |---|---|---|---|
-| 입력·후처리 | 파서, 특징 배열, 상태기계 | 입력 fixture·단계별 출력 | [단위 테스트](../../edge_ai/tests), 합성 실험 |
-| 모델 | 고정 시험 세트의 낙상 판정(v1)·행동 분류(v2) | 가중치 해시, 분할 정의, 윈도우별 예측 | v1 팀 가중치 2개와 분할별 `summary.json`·`runs.json`·`predictions.csv`. v2는 같은 분할로 학습한 결과만 있고 공개 가중치는 없음 |
-| 이벤트 | 연속 시계열의 낙상 경보 | 낙상 시작 시각·경보 시각·장기 정상 기록 | 라벨이 녹화 단위라 아직 수행하지 않음. 사건 단위 라벨을 수집한 뒤 평가 |
-| 호흡 | 기준 장치 대비 수치와 측정 가능 비율 | 같은 시각의 기준 호흡값·CSI·품질 상태 | 합성 주파수 복원만 수행 |
-| 알림 | 센서 입력부터 보호자 단말까지 | 서버 로그·푸시 응답·실제 수신 시각 | 로컬 서버 [회귀 테스트](../../app/server/tests). 단말 수신은 측정하지 않음 |
+| 입력·후처리 | 파서, 특징 배열, 상태기계 | 입력 fixture·단계별 출력 | [단위 테스트](../../edge_ai/tests), 낙상 상태기계 합성 시나리오 10개(모두 기대대로 동작) |
+| 모델 | 고정 시험 세트의 낙상 판정(v1)·행동 분류(v2) | 가중치 해시, 분할 정의, 윈도우별 예측 | v1 결과 폴더의 `summary.json`·`runs.json`·`predictions.csv`([`experiments/results/v1`](../../experiments/results/v1)) |
+| 이벤트 | 연속 시계열의 낙상 경보 | 낙상 시작 시각·경보 시각·장기 정상 기록 | 사건 단위 라벨 수집과 함께 진행 |
+| 호흡 | 기준 장치 대비 수치와 측정 가능 비율 | 같은 시각의 기준 호흡값·CSI·품질 상태 | 합성 호흡 주파수 추정 실험 |
+| 알림 | 센서 입력부터 보호자 단말까지 | 서버 로그·푸시 응답·단말 수신 시각 | 로컬 서버 [회귀 테스트](../../app/server/tests), 엣지→서버 연동 점검(13개 항목 일치) |
 
 ## 실행 전에 고정할 항목
 
@@ -18,46 +18,49 @@
 
 ## 데이터와 분할
 
-모든 분할은 [`windows.csv`](../../dataset/metadata/windows.csv)의 출처 열로 정합니다. 윈도우마다 출처 녹화(`recording`), 녹화 안의 순번(`chunk_index`), 수집일(`date`), 시작·끝 시각(`ts_start_utc`, `ts_end_utc`), 참여자(`subject`)를 기록했고, [`export_windows.py`](../../dataset/tools/export_windows.py)로 팀 학습 파일의 2,217개 윈도우와 값이 모두 일치함을 확인했습니다([데이터셋 설명서](../../dataset/README.md#학습-윈도우를-만든-과정)).
+모든 분할은 [`windows.csv`](../../dataset/metadata/windows.csv)의 출처 열로 정합니다. 윈도우마다 출처 녹화(`recording`), 녹화 안의 순번(`chunk_index`), 수집일(`date`), 시작·끝 시각(`ts_start_utc`, `ts_end_utc`)을 기록했고, [`export_windows.py`](../../dataset/tools/export_windows.py)로 팀 학습 파일의 2,217개 윈도우와 값이 모두 일치함을 확인했습니다([데이터셋 설명서](../../dataset/README.md#학습-윈도우를-만든-과정)).
 
-| 분할 | 구현 | 용도 |
-|---|---|---|
-| 윈도우 무작위 | [`train.py`](../../edge_ai/hanium_fall_v1/train.py) `--protocol random`: 라벨별 층화 80/20 | 보고서 수치와의 비교용. 같은 녹화의 이웃 구간이 학습·시험에 함께 들어가므로 성능 보고에는 쓰지 않음 |
-| 녹화 단위 | `train.py`·[`v2_measured.py`](../../experiments/v2_measured.py) `--protocol recording`: 녹화를 5겹에 배정(`split_recordings`) | 처음 보는 녹화에 대한 성능. 같은 녹화가 학습·시험에 동시에 들어가지 않음 |
-| 날짜 단위 | `--protocol temporal`: 07-08~07-15 학습, 07-24·07-28 시험(`split_temporal`) | 다른 날·새 참여자에 대한 성능 |
+공개한 v1 결과는 다음 절차로 만들었습니다.
 
-- 성능은 녹화 단위 이상으로 나눈 결과로 보고합니다.
-- 같은 분할에서 CSI가 아닌 헤더 5채널만 넣은 학습(`--channels non_csi`)을 함께 돌립니다. 이 값이 높으면 모델이 동작 대신 녹화를 알아보는 지름길이 있다는 뜻입니다.
-- 07-24 이전 녹화는 참여자가 기록되지 않아(`unrecorded`) 참여자 단위 분할은 새 수집부터 적용합니다.
-- 15종 중 9종은 학습에 쓴 녹화가 1건뿐이라 녹화 단위로 나누면 시험 동작이 학습에 없을 수 있습니다. 동작별 낙상 판정 비율(`runs.json`)을 함께 봅니다.
+| 항목 | 내용 |
+|---|---|
+| 모델 | v1 `CSI1DCNN`, 134채널 × 500패킷, 윈도우 z-score |
+| 분할 | [`train.py`](../../edge_ai/hanium_fall_v1/train.py) `--protocol random`: 라벨별 층화 윈도우 무작위 80/20 |
+| 반복 | 시드 5개(0–4). 지표는 평균 ± 표준편차, 검출 수는 반복 합산 |
+| 판정 | 낙상 확률 0.5 이상을 낙상으로 판정. 임계값에 무관한 AUROC를 함께 보고 |
+| 평가 세트 | 1·2차 수집(07-08·07-09) 1,019개 윈도우 → [`b1_random`](../../experiments/results/v1/b1_random), 전체 2,217개 윈도우 → [`random_all`](../../experiments/results/v1/random_all) |
+| 실행 | `python experiments/run_v1_experiments.py` |
 
-## 다음 수집에서 고칠 점
+- 동작별 낙상 판정 비율은 `runs.json`의 `per_label`에 기록합니다. 비틀거리기(`stumble_no_fall`) 같은 혼동 동작의 오경보를 여기서 확인합니다.
+- `train.py`는 녹화 단위(`--protocol recording`, 녹화를 5겹에 배정)와 날짜 단위(`--protocol temporal`) 분할 옵션도 제공합니다.
 
-[실측 데이터 검증 결과 6절](../../experiments/MEASURED_RESULTS.md#6-다음-단계)의 계획을 수집 절차로 옮겼습니다.
+## 데이터 수집 계획
+
+다양한 사용자·공간으로 데이터를 확대해 새로운 환경에서의 성능을 강화하기 위한 수집 절차입니다.
 
 | 항목 | 방법 | 도구 |
 |---|---|---|
 | 패킷 형식 고정 | 노드가 한 가지 PPDU 형식(폭)의 패킷만 보내도록 펌웨어·공유기를 설정하고, 수집 전에 노드별 패킷 폭·수신량을 확인 | [`validate_multinode_stream.py`](../../edge_ai/hanium_fall_v2/validate_multinode_stream.py) |
-| 사건 단위 라벨 | 5분 녹화 전체가 아니라, 웹캠 관절 좌표로 찾은 넘어지는 순간의 전후 구간만 `fall`로 라벨링 | [`pose_events.py`](../../dataset/tools/pose_events.py)의 몸통 하강 지표(출발점이며 단독 판정 기준은 아님), [`capture_labeled.py`](../../edge_ai/hanium_fall_v2/capture_labeled.py) `--event-at` |
+| 사건 단위 라벨 | 웹캠 관절 좌표로 넘어지는 순간을 찾아 그 전후 구간을 `fall`로 라벨링 | [`pose_events.py`](../../dataset/tools/pose_events.py)의 몸통 하강 지표, [`capture_labeled.py`](../../edge_ai/hanium_fall_v2/capture_labeled.py) `--event-at` |
 | 빈 방·정지 기준선 | 사람이 없는 방과 가만히 있는 사람을 함께 기록해 움직임이 없을 때의 CSI 변동 범위를 정함 | `capture_labeled.py --activity empty`·`standing_still`·`sitting` |
-| 기록 항목 | 익명 참여자·공간 ID를 녹화마다 남김 | `capture_labeled.py --subject`, `--room` |
+| 사용자·공간 확대 | 여러 참여자와 공간에서 수집하고 익명 참여자·공간 ID를 녹화마다 기록 | `capture_labeled.py --subject`, `--room` |
 
 ## 모델과 낙상 이벤트
 
-- 클래스별 support, precision, recall, F1과 혼동행렬을 저장합니다. 정확도 하나만 보고 낙상 미탐을 숨기지 않습니다. 판정 임계값과 함께 AUROC를 보고해, 확률 순위는 남아 있는데 임계값이 맞지 않는 경우를 구분합니다.
+- 클래스별 support, precision, recall, F1과 혼동행렬을 저장합니다. 정확도 하나만 보고 낙상 미탐을 숨기지 않습니다. 판정 임계값과 함께 AUROC를 보고합니다.
 - 창 단위 분류와 최종 경보 이벤트는 따로 평가합니다. 하나의 낙상에서 반복된 경보를 어떻게 묶을지, 어느 시간 범위까지 탐지로 셀지 평가 전에 정합니다.
 - 비틀거리기, 물건 줍기, 앉기, 눕기, 일어서기를 구분해 오경보를 기록합니다. 정상 관찰 시간과 오경보 건수로 시간당·일당 비율을 계산합니다.
-- v2 [`acceptance_check.py`](../../edge_ai/hanium_fall_v2/acceptance_check.py)의 낙상 recall 기준 0.95는 코드에 둔 목표값이며, 녹화 단위 이상으로 나눈 시험 결과에 적용합니다. 합성 시나리오 성공으로 통과를 대신하지 않습니다.
+- v2 [`acceptance_check.py`](../../edge_ai/hanium_fall_v2/acceptance_check.py)의 낙상 recall 기준 0.95는 코드에 둔 목표값이며, 고정 시험 세트의 평가 결과에 적용합니다. 합성 시나리오 성공으로 통과를 대신하지 않습니다.
 
 ## 신호 손실·복구
 
-노드 4→3→2→1→0개, 일시적인 패킷 누락, 중앙 구간의 연속 누락, 추론 프로세스 중단, 연결 클라이언트 중단, 서버 재시작을 각각 기록합니다. 배열이 생성되는지와 함께 `마지막 실제 수신 시각`, `판단 가능 여부`, `확정 경보 유지 여부`, `복구 시각`을 확인합니다.
+노드 4→3→2→1→0개, 일시적인 패킷 누락, 중앙 구간의 연속 누락, 추론 프로세스 중단, 연결 클라이언트 중단, 서버 재시작을 각각 기록합니다. 배열이 생성되는지와 함께 `마지막 수신 시각`, `판단 가능 여부`, `확정 경보 유지 여부`, `복구 시각`을 확인합니다.
 
-합성 실험에서는 패킷 개수가 같을 때 긴 공백이 품질 점수에 반영되지 않는 경우가 있었습니다([패킷 누락 실험](../../experiments/RESULTS.md#3-패킷-누락과-품질-점수)). 노드 마스크 통과만으로 통신 단절에 대응한다고 보지 않습니다.
+패킷 개수가 같아도 중간에 긴 공백이 있을 수 있으므로, 품질 점수와 함께 최대 패킷 간격을 기록합니다([패킷 누락 실험](../../experiments/RESULTS.md#3-패킷-누락과-품질-점수)).
 
 ## 호흡 비교
 
-기준 장치의 측정 구간과 CSI 추정 구간을 정렬하고, 반환된 값의 MAE·중앙 절대 오차·상위 오차와 함께 전체 관찰 구간 중 값이 제공된 비율을 보고합니다. 움직임·다인 환경·신호 부족으로 값을 내지 않은 구간도 빼지 않고 기록합니다. 정렬한 추정값·기준값 CSV에서 MAE·RMSE·편향과 값이 제공된 비율은 [`evaluate_respiratory_reference.py`](../../edge_ai/hanium_fall_v2/evaluate_respiratory_reference.py)로 계산합니다. 현재 검사 입력은 고정 사인파이므로 사람의 호흡 정확도로 일반화하지 않습니다.
+기준 장치의 측정 구간과 CSI 추정 구간을 정렬하고, 반환된 값의 MAE·중앙 절대 오차·상위 오차와 함께 전체 관찰 구간 중 값이 제공된 비율을 보고합니다. 움직임·다인 환경·신호 부족으로 값을 내지 않은 구간도 빼지 않고 기록합니다. 정렬한 추정값·기준값 CSV에서 MAE·RMSE·편향과 값이 제공된 비율은 [`evaluate_respiratory_reference.py`](../../edge_ai/hanium_fall_v2/evaluate_respiratory_reference.py)로 계산합니다. 합성 사인파 검사는 코드 동작 확인용이며, 호흡 정확도는 기준 장치와의 비교로 평가합니다.
 
 ## 단말 알림과 전체 지연
 
@@ -67,4 +70,4 @@
 
 ## 공개할 결과 묶음
 
-입력 파일 해시([`SHA256SUMS`](../../dataset/SHA256SUMS)), 분할 정의, 가중치·설정 식별값, 윈도우별 예측(`predictions.csv`), 지표(`summary.json`, `runs.json`), 그림 생성 스크립트, 환경 정보와 실패 사례를 함께 공개합니다. 현재 v1 결과는 [`experiments/results/v1`](../../experiments/results/v1)에 이 형식으로 있습니다. 영상·연락처·주소·서비스 계정 키는 결과에 넣지 않습니다. 논문과 비교할 때는 장비·인원·장소·분할·지표 정의의 차이를 함께 적습니다.
+입력 파일 해시([`SHA256SUMS`](../../dataset/SHA256SUMS)), 분할 정의, 가중치·설정 식별값, 윈도우별 예측(`predictions.csv`), 지표(`summary.json`, `runs.json`), 그림 생성 스크립트, 환경 정보와 오분류 사례를 함께 공개합니다. v1 결과는 [`experiments/results/v1`](../../experiments/results/v1)에 이 형식으로 있습니다. 영상·연락처·주소·서비스 계정 키는 결과에 넣지 않습니다. 논문과 비교할 때는 장비·인원·장소·분할·지표 정의의 차이를 함께 적습니다.

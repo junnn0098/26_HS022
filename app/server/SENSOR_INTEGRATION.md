@@ -31,7 +31,7 @@ Content-Type: application/json
 
 `Content-Type: application/json`이 아니면 415로 거절합니다. 서버를 `HANIUM_API_TOKEN`과 함께 실행했다면 `Authorization: Bearer <토큰>` 헤더도 필요합니다.
 
-보낸 값은 저장과 동시에 WebSocket으로 연결된 앱과 관리자 화면에 전달됩니다. 낙상 모델은 방 이름·좌표를 출력하지 않으므로, 실제 엣지 연결(`jetson_edge_client.py live-status`)은 운영자가 지정한 설치 위치를 `x`, `y`로 보냅니다([변환 규칙](JETSON_EDGE_CLIENT.md#실시간-추론-결과-연결-live-status)).
+보낸 값은 저장과 동시에 WebSocket으로 연결된 앱과 관리자 화면에 전달됩니다. 엣지 추론 결과는 `jetson_edge_client.py live-status`가 이 형식으로 바꿔 보냅니다([변환 규칙](JETSON_EDGE_CLIENT.md#실시간-추론-결과-연결-live-status)).
 
 권장 요청 본문:
 
@@ -53,13 +53,13 @@ Content-Type: application/json
 
 | 필드 | 타입 | 필수 | 설명 |
 |---|---:|---:|---|
-| `x` | number | 예 | 집 도면 기준 X 좌표, 0.0~1.0 |
-| `y` | number | 예 | 집 도면 기준 Y 좌표, 0.0~1.0 |
+| `x` | number | 예 | 집 도면 기준 X 좌표, 0.0–1.0 |
+| `y` | number | 예 | 집 도면 기준 Y 좌표, 0.0–1.0 |
 | `status` | string | 예 | `normal`, `out`, `danger`, `still`, `unknown` |
 | `pose` | string | 아니오 | `standing`, `walking`, `lying`, `sitting` |
-| `confidence` | number | 아니오 | 추정 신뢰도, 0.0~1.0 |
+| `confidence` | number | 아니오 | 추정 신뢰도, 0.0–1.0 |
 | `breathingRate` | number | 아니오 | 호흡수 참고값, 분당 호흡 횟수. `respirationRate`, `breathRate`도 허용. 없으면 서버도 `null`로 전달 |
-| `breathingConfidence` | number | 아니오 | 호흡 신호 판단 확실도, 0.0~1.0. `respirationConfidence`도 허용 |
+| `breathingConfidence` | number | 아니오 | 호흡 신호 판단 확실도, 0.0–1.0. `respirationConfidence`도 허용 |
 | `source` | string | 아니오 | `jetson_orin`(실제 엣지 추론), `scripted_demo`(시연 스크립트), `admin`, `test` 등. 없으면 `unknown` |
 | `holdMs` | number | 아니오 | 이 수동 위치를 유지할 시간(ms) |
 

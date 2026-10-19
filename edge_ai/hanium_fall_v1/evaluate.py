@@ -2,7 +2,7 @@
 
 Example (from edge_ai/)
   python -m hanium_fall_v1.evaluate --weights hanium_fall_v1/weights/team_v1_0717.pth \
-      --channels all --batches b3_0724 b4_0728 --out ../experiments/results/v1/team_model_holdout.json
+      --channels all --npz-dir ../dataset/sample --metadata ../dataset/sample/sample_windows.csv
 """
 
 from __future__ import annotations

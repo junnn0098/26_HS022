@@ -1,10 +1,15 @@
-"""Reproduce every v1 (134ch x 500 1D-CNN) result published in experiments/results/v1.
+"""Train and evaluate the v1 1D-CNN (134ch x 500) on the measured dataset.
+
+Two runs, both with a label-stratified 80/20 window split repeated over 5 seeds:
+  b1_random   1st and 2nd collection (b1_0708_0709, 1,019 windows)
+  random_all  all collection days (2,217 windows)
 
 Needs the dataset NPZ files in dataset/data (python dataset/tools/download.py) and
-PyTorch. Runs on CPU in about 15 minutes with the default 3 parallel jobs.
+PyTorch. Results go to experiments/results/v1/<run>/ and take about 5 minutes on CPU
+with the defaults (the published results were made with --threads 2).
 
-  python experiments/run_v1_experiments.py            # all runs
-  python experiments/run_v1_experiments.py --only temporal_lltf
+  python experiments/run_v1_experiments.py            # both runs
+  python experiments/run_v1_experiments.py --only b1_random
 """
 
 from __future__ import annotations
@@ -18,21 +23,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EDGE = ROOT / "edge_ai"
 OUT = ROOT / "experiments" / "results" / "v1"
-WEIGHTS = EDGE / "hanium_fall_v1" / "weights"
 
-# name: (protocol, channels, seeds[, batches])
-TRAINING_RUNS = {
-    "report_1019_random_all": ("random", "all", [0, 1, 2, 3, 4], ["b1_0708_0709"]),
-    "report_1019_recording_all": ("recording", "all", [0], ["b1_0708_0709"]),
-    "random_all": ("random", "all", [0, 1, 2, 3, 4]),
-    "random_non_csi": ("random", "non_csi", [0, 1, 2, 3, 4]),
-    "recording_all": ("recording", "all", [0]),
-    "recording_lltf": ("recording", "lltf", [0]),
-    "temporal_all": ("temporal", "all", [0, 1, 2]),
-    "temporal_csi": ("temporal", "csi", [0, 1, 2]),
-    "temporal_lltf": ("temporal", "lltf", [0, 1, 2]),
+SEEDS = [0, 1, 2, 3, 4]
+# name: dataset batches (None = all)
+RUNS = {
+    "b1_random": ["b1_0708_0709"],
+    "random_all": None,
 }
-TEAM_WEIGHTS = {"team_v1_0717": "team_v1_0717.pth", "team_v1_0803": "team_v1_0803.pth"}
 
 
 def run(command: list[str], log: Path) -> int:
@@ -43,34 +40,22 @@ def run(command: list[str], log: Path) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--jobs", type=int, default=3)
-    parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--threads", type=int, default=2)
     parser.add_argument("--only", nargs="*", help="subset of run names")
     args = parser.parse_args()
-    known = set(TRAINING_RUNS) | set(TEAM_WEIGHTS) | {"team_v1_0717_later"}
-    unknown = sorted(set(args.only or []) - known)
+    unknown = sorted(set(args.only or []) - set(RUNS))
     if unknown:
-        parser.error(f"unknown run names: {', '.join(unknown)} (choose from {', '.join(sorted(known))})")
+        parser.error(f"unknown run names: {', '.join(unknown)} (choose from {', '.join(RUNS)})")
 
     jobs = []
-    for name, (protocol, channels, seeds, *batches) in TRAINING_RUNS.items():
+    for name, batches in RUNS.items():
         if args.only and name not in args.only:
             continue
-        extra = ["--batches", *batches[0]] if batches else []
-        jobs.append((name, [sys.executable, "-m", "hanium_fall_v1.train", "--protocol", protocol,
-                            "--channels", channels, "--seeds", *map(str, seeds), "--threads", str(args.threads),
+        extra = ["--batches", *batches] if batches else []
+        jobs.append((name, [sys.executable, "-m", "hanium_fall_v1.train", "--protocol", "random",
+                            "--channels", "all", "--seeds", *map(str, SEEDS), "--threads", str(args.threads),
                             *extra, "--out", str(OUT / name)]))
-    for name, weights in TEAM_WEIGHTS.items():
-        if args.only and name not in args.only:
-            continue
-        jobs.append((name, [sys.executable, "-m", "hanium_fall_v1.evaluate", "--weights", str(WEIGHTS / weights),
-                            "--channels", "all", "--out", str(OUT / f"{name}.json")]))
-    if not args.only or "team_v1_0717_later" in args.only:
-        # 07-17 weights on the two later collection days only (made before those days existed)
-        jobs.append(("team_v1_0717_later", [sys.executable, "-m", "hanium_fall_v1.evaluate", "--weights",
-                                            str(WEIGHTS / TEAM_WEIGHTS["team_v1_0717"]), "--channels", "all",
-                                            "--batches", "b3_0724", "b4_0728",
-                                            "--out", str(OUT / "team_v1_0717_later.json")]))
 
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         codes = dict(zip([n for n, _ in jobs], pool.map(lambda job: run(job[1], OUT / "logs" / f"{job[0]}.log"), jobs)))

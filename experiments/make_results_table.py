@@ -1,65 +1,85 @@
-"""Print the measured-data result table (markdown) from experiments/results/*.
+"""Print the measured-data result tables (markdown) from experiments/results/v1.
 
   python experiments/make_results_table.py
+
+Table 1: mean ± std over the 5 seeds and the summed confusion counts (summary.json).
+Table 2: false positives per non-fall label, from predictions.csv joined with
+dataset/metadata/windows.csv (is_fall == 0 and p_fall >= threshold), summed over seeds.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import sys
+from collections import Counter
 from pathlib import Path
 
-RESULTS = Path(__file__).resolve().parent / "results"
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "experiments" / "results" / "v1"
+WINDOWS = ROOT / "dataset" / "metadata" / "windows.csv"
 
+# name, table-1 title, table-2 column title
 RUNS = [
-    ("v1", "개발보고서 조건 추정: 07-08·07-09 1,019개, 윈도우 무작위 80/20", "v1/report_1019_random_all", "5회"),
-    ("v1", "2,217개 전체, 윈도우 무작위 80/20", "v1/random_all", "5회"),
-    ("v1", "같은 분할, CSI가 아닌 헤더 5채널만 입력", "v1/random_non_csi", "5회"),
-    ("v1", "1,019개, 녹화 단위 5겹", "v1/report_1019_recording_all", "5겹"),
-    ("v1", "2,217개, 녹화 단위 5겹", "v1/recording_all", "5겹"),
-    ("v1", "2,217개, 녹화 단위 5겹, LLTF 64채널만", "v1/recording_lltf", "5겹"),
-    ("v1", "날짜 분할 (07-08~07-15 학습 → 07-24·07-28 시험)", "v1/temporal_all", "3회"),
-    ("v1", "날짜 분할, 헤더 제외", "v1/temporal_csi", "3회"),
-    ("v1", "날짜 분할, LLTF 64채널만", "v1/temporal_lltf", "3회"),
-    ("v2", "2,217개, 녹화 단위 5겹", "v2_measured/recording", "5겹"),
-    ("v2", "날짜 분할", "v2_measured/temporal", "3회"),
+    ("b1_random", "1·2차 수집 (07-08·07-09) 1,019개", "1·2차 수집 1,019개"),
+    ("random_all", "전체 (07-08–07-28) 2,217개", "전체 2,217개"),
 ]
+METRICS = ("recall", "precision", "f1", "auroc")
+CATEGORY_ORDER = {"confusing": 0, "daily": 1}
 
 
-def fmt(stat: dict | None) -> str:
-    if not stat:
-        return "-"
+def fmt(stat: dict) -> str:
     return f"{stat['mean']:.3f}" if stat["std"] < 0.0005 else f"{stat['mean']:.3f} ± {stat['std']:.3f}"
 
 
-def pooled_precision(s: dict) -> str:
-    """Precision from the summed counts; '-' when no run predicted a fall."""
-    flagged = s["tp"] + s["fp"]
-    return f"{s['tp'] / flagged:.3f}" if flagged else "-"
+def load_summary(name: str) -> dict:
+    return json.loads((RESULTS / name / "summary.json").read_text(encoding="utf-8"))
+
+
+def false_positives(name: str, meta: dict[str, dict], threshold: float) -> tuple[Counter, Counter]:
+    tested, flagged = Counter(), Counter()
+    with (RESULTS / name / "predictions.csv").open(encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            window = meta[row["window_id"]]
+            if window["is_fall"] != "0":
+                continue
+            tested[window["label"]] += 1
+            flagged[window["label"]] += float(row["p_fall"]) >= threshold
+    return tested, flagged
 
 
 def main() -> None:
-    argparse.ArgumentParser(description=__doc__).parse_args()
-    print("| 모델 | 평가 방식 | 반복 | 낙상 재현율 | 정밀도(합산) | AUROC | 낙상 검출 / 전체 | 오경보 |")
-    print("|---|---|---|---:|---:|---:|---:|---:|")
-    for model, name, path, repeats in RUNS:
-        summary_path = RESULTS / path / "summary.json"
-        if not summary_path.exists():
-            print(f"| {model} | {name} | {repeats} | (실행 전) | | | | |")
-            continue
-        s = json.loads(summary_path.read_text(encoding="utf-8"))["summary"]
-        print(f"| {model} | {name} | {repeats} | {fmt(s.get('recall'))} | {pooled_precision(s)} | "
-              f"{fmt(s.get('auroc'))} | {s['tp']} / {s['tp'] + s['fn']} | {s['fp']} |")
-    later = json.loads((RESULTS / "v1" / "team_v1_0717_later.json").read_text(encoding="utf-8"))["overall"]
-    print(f"| 팀 가중치 `team_v1_0717` | 07-24·07-28 합쳐서 적용 (만든 뒤 수집) | - | {later['recall']:.3f} | "
-          f"{'-' if later['precision'] is None else format(later['precision'], '.3f')} | {later['auroc']:.3f} | "
-          f"{later['tp']} / {later['tp'] + later['fn']} | {later['fp']} |")
-    for name in ("team_v1_0717", "team_v1_0803"):
-        report = json.loads((RESULTS / "v1" / f"{name}.json").read_text(encoding="utf-8"))
-        for batch, m in report["by_batch"].items():
-            print(f"| 팀 가중치 `{name}` | {batch} 전체에 적용 | - | {m['recall']:.3f} | "
-                  f"{'-' if m['precision'] is None else format(m['precision'], '.3f')} | {m['auroc']:.3f} | "
-                  f"{m['tp']} / {m['tp'] + m['fn']} | {m['fp']} |")
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")
+    summaries = {name: load_summary(name) for name, *_ in RUNS}
+
+    print("| 데이터 | 시험 윈도우(5회 합계) | 낙상 재현율 | 정밀도 | F1 | AUROC | TP | FP | TN | FN |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for name, title, _ in RUNS:
+        s = summaries[name]["summary"]
+        total = s["tp"] + s["fp"] + s["tn"] + s["fn"]
+        values = " | ".join(fmt(s[m]) for m in METRICS)
+        counts = " | ".join(f"{s[k]:,}" for k in ("tp", "fp", "tn", "fn"))
+        print(f"| {title} | {total:,} | {values} | {counts} |")
+    print()
+
+    with WINDOWS.open(encoding="utf-8") as handle:
+        meta = {row["window_id"]: row for row in csv.DictReader(handle)}
+    labels = {row["label"]: (row["label_ko"], row["category"]) for row in meta.values() if row["is_fall"] == "0"}
+    flags = {name: false_positives(name, meta, summaries[name]["threshold"]) for name, *_ in RUNS}
+
+    print("| 구분 | 동작 | " + " | ".join(f"{short} 오탐 / 시험" for *_, short in RUNS) + " |")
+    print("|---|---|" + "---:|" * len(RUNS))
+    for label, (label_ko, category) in sorted(labels.items(), key=lambda kv: (CATEGORY_ORDER[kv[1][1]], kv[1][0])):
+        cells = []
+        for name, *_ in RUNS:
+            tested, flagged = flags[name]
+            cells.append(f"{flagged[label]} / {tested[label]}" if tested[label] else "-")
+        group = "혼동 동작" if category == "confusing" else "일상 동작"
+        print(f"| {group} | {label_ko} | " + " | ".join(cells) + " |")
+    totals = [f"{sum(flags[n][1].values()):,} / {sum(flags[n][0].values()):,}" for n, *_ in RUNS]
+    print("| 합계 | | " + " | ".join(totals) + " |")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ WiFi CSI 엣지 추론 결과를 받아 보호자에게 실시간 상태·위치
 
 | 경로 | 역할 |
 |---|---|
-| `lib/features/auth` | 시연용 역할 선택(보호자/피보호자). 계정 인증은 구현하지 않았습니다 |
+| `lib/features/auth` | 역할 선택(보호자/피보호자) |
 | `lib/features/dashboard` | 보호자 홈 요약 (정상 / 주의 / 위험 / 확인 필요) |
 | `lib/features/home_map` | 집 도면 기반 위치·이동 경로 표시 |
 | `lib/features/alerts` | 안전 알림 목록, 위험 대응, 알림 1건으로 만든 예시 재구성 화면 |
@@ -17,7 +17,7 @@ WiFi CSI 엣지 추론 결과를 받아 보호자에게 실시간 상태·위치
 | `server/jetson_edge_client.py` | 엣지 추론 결과를 서버로 전달 (`live-status`, source `jetson_orin`), 발표용 시나리오 재현 (`sequence`, `once`, source `scripted_demo`) |
 | `server/legacy_fastapi_prototype/` | 초기 FastAPI 프로토타입 (현재 미사용) |
 
-[전체 실행 순서와 네트워크 주소](../docs/RUNBOOK.md) · [현재 구현의 확인 사항](../docs/IMPLEMENTATION_STATUS.md)
+[전체 실행 순서와 네트워크 주소](../docs/RUNBOOK.md) · [기능별 구현 현황](../docs/IMPLEMENTATION_STATUS.md)
 
 ## 실행
 
@@ -60,4 +60,4 @@ flutter test
 
 `test/safety_models_test.dart`는 위 표시 규칙(확인 필요, 측정 대기, 출처 구분)을, `test/widget_test.dart`는 서버 없이 역할 선택 화면과 보호자 첫 화면('확인 필요')이 뜨는지 확인합니다.
 
-> 로그인 화면은 역할 선택용이며 인증은 구현되어 있지 않습니다. 로컬 서버는 기본적으로 같은 네트워크의 모든 기기에서 접속할 수 있으므로(시작 시 경고 출력) 관리 가능한 시연 네트워크에서만 사용합니다. `HOST`, `HANIUM_API_TOKEN`, `HANIUM_CORS_ORIGIN` 설정은 [`server/README.md`](server/README.md#보안네트워크-설정)를 참고하세요.
+> 로컬 서버는 기본적으로 같은 네트워크의 모든 기기에서 접속할 수 있으므로(시작 시 경고 출력) 관리 가능한 시연 네트워크에서만 사용합니다. `HOST`, `HANIUM_API_TOKEN`, `HANIUM_CORS_ORIGIN` 설정은 [`server/README.md`](server/README.md#보안네트워크-설정)를 참고하세요.

@@ -13,7 +13,7 @@ Jetson (edge_ai 추론) -> jetson_edge_client.py -> POST /sensor/update -> local
 
 | 모드 | 보내는 값 | `source` |
 |---|---|---|
-| `live-status`, `stdin-json` | 실제 엣지 추론 결과 | `jetson_orin` (앱 'Jetson 실시간 추론') |
+| `live-status`, `stdin-json` | 엣지 추론 결과 | `jetson_orin` (앱 'Jetson 실시간 추론') |
 | `once`, `sequence`, `heartbeat` | 미리 정한 예시값 | `scripted_demo` (앱 '시연 입력' 칩) |
 
 ## 서버 먼저 실행
@@ -64,12 +64,12 @@ python3 jetson_edge_client.py live-status \
 | `fall.state`가 `normal`·`fall_candidate`·`post_fall_check`·`recovered` | `status: normal` |
 | `fall.state`가 `model_unavailable`·`unknown`·그 밖의 값이거나 없음 | `status: unknown`(판단 불가). 정상으로 전달하지 않음 |
 | `health.respiratory.breathing_rate_bpm` | 값이 없으면 생략. 서버도 채우지 않고 `breathingRate: null`로 전달(앱 '측정 대기') |
-| 위치 | 모델은 방 이름·좌표를 출력하지 않음. 운영자가 지정한 설치 위치(`--room-x`, `--room-y`)를 사용 |
+| 위치 | `--room-x`, `--room-y` (도면 좌표 0.0–1.0) |
 | `source` | `jetson_orin` |
 
-`live-status`는 `unix_time`이 `--max-age`(기본 10초)보다 오래되었거나 없는 레코드를 전달하지 않고, 대신 `status: unknown`을 한 번 보내 `[stale]` 경고를 출력합니다(`--once`에서는 종료 코드 1). Jetson과 PC의 시계가 다르면 시계를 맞추거나 `--max-age 0`으로 검사를 끕니다. 모델 미설치와 센서 단절에 관한 [확인 사항](../../docs/IMPLEMENTATION_STATUS.md#우선-보완할-구현-항목)을 함께 확인하세요.
+`live-status`는 `unix_time`이 `--max-age`(기본 10초)보다 오래되었거나 없는 레코드를 전달하지 않고, 대신 `status: unknown`을 한 번 보내 `[stale]` 경고를 출력합니다(`--once`에서는 종료 코드 1). Jetson과 PC의 시계가 다르면 시계를 맞추거나 `--max-age 0`으로 검사를 끕니다. 기능별 동작은 [기능별 구현 현황](../../docs/IMPLEMENTATION_STATUS.md)에 정리했습니다.
 
-v2 낙상 가중치는 다음 데이터 수집 후 학습할 예정이라 저장소에 없습니다. 가중치 없이 `run_live.sh`를 실행하면 `fall.state`가 `model_unavailable`이므로 서버·앱에는 `unknown`('확인 필요')으로 전달됩니다. 이 경로는 연결 방식이며, 모델의 실측 성능은 [실측 데이터 검증 결과](../../experiments/MEASURED_RESULTS.md)를 기준으로 설명합니다.
+`run_live.sh`는 낙상 체크포인트(`edge_ai/models/production/best_model.pt` 또는 `RUVIEW_CHECKPOINT`)가 없으면 수신·건강 모니터링 경로만 시작하고 `fall.state`를 `model_unavailable`로 기록합니다. 이 값은 서버·앱에 `unknown`('확인 필요')으로 전달됩니다.
 
 ## 그 밖의 AI 출력 연결 (단순 JSON)
 
@@ -83,7 +83,7 @@ v2 낙상 가중치는 다음 데이터 수집 후 학습할 예정이라 저장
 python3 ai_inference.py | python3 jetson_edge_client.py stdin-json --server-url http://172.20.10.2:8000
 ```
 
-이 단순 JSON 경로는 `lying`을 `danger`로 매핑합니다. 낙상 상태기계와 같은 판정 규칙이 아니므로 실제 추론 연결에는 `live-status`를 사용합니다. 아래 목록에 없는 label은 `unknown`으로, 호흡값이 없으면 생략해 전달합니다.
+이 단순 JSON 경로는 `lying`을 `danger`로 매핑합니다. 낙상 상태기계와 같은 판정 규칙이 아니므로 Jetson 추론 결과 연결에는 `live-status`를 사용합니다. 아래 목록에 없는 label은 `unknown`으로, 호흡값이 없으면 생략해 전달합니다.
 
 ```text
 normal, safe, standing -> normal

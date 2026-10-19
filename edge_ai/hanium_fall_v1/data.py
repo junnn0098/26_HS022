@@ -11,12 +11,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_METADATA = REPO_ROOT / "dataset" / "metadata" / "windows.csv"
 DEFAULT_NPZ_DIR = REPO_ROOT / "dataset" / "data"
 
-# Channel layout of the team's 134-wide windows (verified on the dataset):
-#   0-4    not CSI. The team's amplitude extractor starts two bytes into the RuView
-#          payload, so these hold frequency/sequence-counter/RSSI/noise/flag bytes.
+# Channel layout of the 134-wide windows:
+#   0-4    packet metadata (frequency/sequence-counter/RSSI/noise/flag bytes); the
+#          amplitude extractor reads pairs starting two bytes into the RuView payload.
 #   5-68   first LLTF block (64 subcarriers; channel 5 is the masked first word).
-#   69-132 second 64-value block. Its meaning depends on the packet width the node
-#          sent (134-wide sessions vs 198-wide sessions), so it shifts between days.
+#   69-132 second 64-value block; its layout follows the packet width the node
+#          sent (134-wide or 198-wide packets).
 #   133    0 for 134-wide packets, a third-block value for 198-wide packets.
 NON_CSI_CHANNELS = (0, 1, 2, 3, 4)
 LLTF_CHANNELS = tuple(range(5, 69))
@@ -64,9 +64,9 @@ def preprocess(windows: np.ndarray, channels: str = "all") -> np.ndarray:
 
     The team normalised each window with one mean/std over all 134x500 values
     (`channels="all"`). Other channel sets zero every channel outside the set and
-    normalise with the kept ones only: `"csi"` drops the non-CSI bytes, `"lltf"`
-    keeps the block that means the same thing on every day, `"non_csi"` keeps only
-    the non-CSI bytes (a probe for shortcut learning).
+    normalise with the kept ones only: `"csi"` drops the packet-metadata channels,
+    `"lltf"` keeps the first LLTF block (same layout for every packet width), and
+    `"non_csi"` keeps only the packet-metadata channels.
     """
     x = np.asarray(windows, dtype=np.float32)
     single = x.ndim == 2

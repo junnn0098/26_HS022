@@ -4,8 +4,8 @@ ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)으�
 
 | 패키지 | 내용 | 가중치 |
 |---|---|---|
-| [`hanium_fall_v1/`](hanium_fall_v1) | 개발보고서의 1D-CNN(134채널 × 500패킷, 낙상/비낙상). 학습·평가·실시간 추론 | 팀 가중치 2개 포함 |
-| `hanium_fall_v2/` | 실시간 서비스용 파이프라인. 노드별 LLTF 선택 → 193채널 × 160프레임 → 다중 노드 모델 → 낙상 상태기계, 호흡·상태 API | 다음 데이터 수집 후 학습 ([이유](../experiments/MEASURED_RESULTS.md)) |
+| [`hanium_fall_v1/`](hanium_fall_v1) | v1 1D-CNN(134채널 × 500패킷, 낙상/비낙상). 학습·평가·실시간 추론 | 팀 학습 가중치 2개 포함 |
+| `hanium_fall_v2/` | 실시간 서비스용 파이프라인. 노드별 LLTF 선택 → 193채널 × 160프레임 → 다중 노드 모델 → 낙상 상태기계, 호흡·상태 API | 데이터 수집 확대 후 학습 예정 |
 
 | v2 파일 | 역할 |
 |---|---|
@@ -22,7 +22,7 @@ ESP32-S3 수신 노드 4대가 보내는 RuView ADR-018 CSI 패킷(UDP 5005)으�
 | `tools/` | CSI 파형 실시간 대시보드·시연 로그 보조 도구, 추론 없음 ([사용법](tools/README.md)) |
 | `config/default_config.json` | 특징·모델·상태기계·건강 모니터링 설정값 |
 
-[전체 실행 순서](../docs/RUNBOOK.md) · [설계·구현 대조](../docs/IMPLEMENTATION_STATUS.md) · [실측 데이터 검증](../experiments/MEASURED_RESULTS.md)
+[전체 실행 순서](../docs/RUNBOOK.md) · [기능별 구현 현황](../docs/IMPLEMENTATION_STATUS.md) · [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)
 
 ## 점검
 
@@ -53,6 +53,6 @@ python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/tea
 
 추론 결과를 앱 서버로 보내려면 `app/server/jetson_edge_client.py live-status`를 사용합니다([설명](../app/server/JETSON_EDGE_CLIENT.md)).
 
-`run_live.sh`는 가중치가 없어도 수신·호흡 모니터링 경로를 시작합니다. 이때 `fall.state`는 `model_unavailable`이고 서버·앱에는 `unknown`(확인 필요)으로 표시됩니다. 실제 낙상 시연 전에 `python -m hanium_fall_v2.validate_fall_checkpoint`로 `live_ready`를 확인하세요. 학습한 체크포인트(`models/`)와 수집 데이터(`captures/`)는 `.gitignore`로 제외되어 있습니다.
+`run_live.sh`는 가중치가 없어도 수신·호흡 모니터링 경로를 시작합니다. 이때 `fall.state`는 `model_unavailable`이고 서버·앱에는 `unknown`(확인 필요)으로 표시됩니다. 낙상 시연 전에 `python -m hanium_fall_v2.validate_fall_checkpoint`로 `live_ready`를 확인하세요. 학습한 체크포인트(`models/`)와 수집 데이터(`captures/`)는 `.gitignore`로 제외되어 있습니다.
 
 공개 데이터셋의 원본 녹화는 [`dataset/tools/raw_to_v2.py`](../dataset/tools/raw_to_v2.py)로 v2 세션 형식으로 바꿀 수 있습니다.

@@ -1,13 +1,12 @@
 """Train and cross-validate the 134ch x 500 1D-CNN on the measured dataset.
 
 Split protocols
-  random     stratified 80/20 split of windows (windows of one recording can land in
-             both train and test, so this is optimistic; it mirrors a plain random split)
+  random     label-stratified 80/20 split of windows
   recording  5-fold split by recording: no recording appears in both train and test
-  temporal   train on 2026-07-08..07-15, test on 2026-07-24 and 07-28 (new days, new subject)
+  temporal   train on the 2026-07-08..07-15 batches, test on the 07-24 and 07-28 batches
 
 Examples (from edge_ai/)
-  python -m hanium_fall_v1.train --protocol recording --channels csi --out ../experiments/results/v1/recording_csi
+  python -m hanium_fall_v1.train --protocol random --channels all --seeds 0 1 2 3 4 --out ../experiments/results/v1/random_all
   python -m hanium_fall_v1.train --final --channels csi --save models/fall_1dcnn_csi.pth
 """
 

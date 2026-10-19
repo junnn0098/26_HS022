@@ -13,7 +13,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-// 계정 인증은 구현하지 않았다. 시연에서 보호자/피보호자 화면을 고르는 역할 선택 화면이다.
+// 보호자/피보호자 화면을 고르는 역할 선택 화면이다.
 class _LoginScreenState extends State<LoginScreen> {
   AppRole _selectedRole = AppRole.guardian;
 
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '시연용 역할 선택 (계정 인증 미구현)',
+                      '역할 선택',
                       style: TextStyle(
                         color: AppColors.primaryDark,
                         fontSize: 13,

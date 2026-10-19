@@ -8,8 +8,8 @@
 |---|---|
 | 내려받기 없는 확인 | Python 3.10 이상, NumPy, PyTorch(PC는 CPU용으로 충분), Node.js, Flutter |
 | 화면·통신 시연 | Node.js, Python 3.10 이상, Flutter/Dart 개발 환경. 앱의 Dart SDK 제약은 `^3.9.2` |
-| 실측 데이터 평가·재현 | 위 Python 환경과 [실측 데이터셋](../dataset/README.md) 내려받기(학습 윈도우 189MB부터) |
-| 실제 낙상 추론 | 센서 전용망, ESP32-S3 노드, Jetson, JetPack과 호환되는 PyTorch, v2 학습 가중치 |
+| 실측 데이터 학습·재현 | 위 Python 환경과 [실측 데이터셋](../dataset/README.md) 내려받기(학습 윈도우 189MB부터), 그림에는 matplotlib |
+| 센서 기반 낙상 추론 | 센서 전용망, ESP32-S3 노드, Jetson, JetPack과 호환되는 PyTorch, v2 학습 체크포인트 |
 | 보호자 푸시 | Firebase 앱 설정, 서버 서비스 계정, 보호자 기기 토큰·알림 권한, 인터넷 연결 |
 
 서버는 Node.js 기본 모듈만 사용하므로 `npm install`이 필요 없습니다. 기기 설정·서비스 계정 키는 담당자가 따로 준비합니다.
@@ -29,7 +29,7 @@ cd app
 flutter test
 ```
 
-- 평가 명령은 [`dataset/sample`](../dataset/sample)의 윈도우 15개(라벨마다 1개)에 팀 가중치를 적용해 전체·수집일별·동작별 지표를 JSON으로 출력합니다. 샘플 대부분(07-08~07-15)은 이 가중치를 학습한 수집일의 데이터이므로 출력 수치는 실행 확인용이며 성능이 아닙니다. 성능은 [실측 데이터 검증 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
+- 평가 명령은 [`dataset/sample`](../dataset/sample)의 윈도우 15개(라벨마다 1개)에 팀 학습 가중치를 적용해 전체·수집일별·동작별 지표를 JSON으로 출력합니다. 샘플이 15개뿐이므로 출력 수치는 실행 확인용입니다. 학습 결과는 [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
 - `edge_ai` 단위 테스트는 PyTorch가 없으면 모델·실시간·분할 테스트를 건너뜁니다.
 - Windows에서 `flutter test`를 처음 실행할 때 개발자 모드(심볼릭 링크 허용)를 요구할 수 있습니다. 확인한 환경은 Flutter 3.47.2입니다.
 - 서버 테스트는 Node.js가 필요하며, 서버를 임시 폴더에 복사해 띄우고 끝나면 종료하므로 `app/server/dev_state.json`을 건드리지 않습니다.
@@ -43,7 +43,7 @@ python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/tea
 python -m hanium_fall_v1.replay_recording ../dataset/sample/raw/csi-1783443615.fall-12s.csi.jsonl.gz
 ```
 
-v1 실시간 스크립트는 결과를 콘솔에만 출력하며 앱 서버로 보내지 않습니다. 이 녹화는 팀 가중치의 학습 날짜에 속하므로 동작 확인용입니다.
+v1 실시간 스크립트는 0.5초마다 낙상 확률을 콘솔에 표시하고, 경보 조건(0.9 이상 즉시, 0.5 이상 2회 연속)을 넘으면 `FALL` 줄을 출력합니다. 녹화 재생은 실시간 경로의 동작 확인용입니다.
 
 ## 1. 센서 없이 화면과 통신 흐름 확인
 
@@ -92,7 +92,7 @@ flutter run --dart-define=SERVER_URL=http://10.0.2.2:8000 --dart-define=DEMO_MOD
 ```
 
 - 위 주소는 같은 PC의 Android 에뮬레이터 기준입니다.
-- 첫 화면은 '시연용 역할 선택 (계정 인증 미구현)'으로, 보호자·피보호자 화면만 고릅니다.
+- 첫 화면 '역할 선택'에서 보호자·피보호자 화면을 고릅니다.
 - 설정 화면의 '상황 재연' 버튼은 `--dart-define=DEMO_MODE=true`(예: `app/run_emulator_local.cmd`)일 때만 보입니다.
 - 서버에 `HANIUM_API_TOKEN`을 설정했다면 앱도 `--dart-define=API_TOKEN=<같은 토큰>`으로 실행합니다. 토큰이 앱 빌드에 들어가므로 시연용으로만 씁니다.
 - 서버 데이터를 받기 전과 `status: unknown`은 '확인 필요', 호흡값이 없으면 '측정 대기'로 표시됩니다.
@@ -118,7 +118,7 @@ python3 -m hanium_fall_v2.selftest
 python3 -m unittest discover -s tests -v
 ```
 
-실시간 경로(`run_live.sh`)는 v2 모델(`hanium_fall_v2`)을 씁니다. v2 가중치는 다음 수집 데이터로 학습할 예정이라 저장소에 없습니다. 학습한 체크포인트가 있으면 `models/production/best_model.pt`에 두고 확인합니다.
+실시간 경로(`run_live.sh`)는 v2 모델(`hanium_fall_v2`)을 씁니다. v2는 모델 구조와 학습 코드(`hanium_fall_v2.train`)를 제공하며, 학습한 체크포인트를 `models/production/best_model.pt`에 두고 확인합니다.
 
 ```bash
 python3 -m hanium_fall_v2.validate_fall_checkpoint models/production/best_model.pt
@@ -132,10 +132,9 @@ RUVIEW_NODES=1,2,3,4 RUVIEW_CHECKPOINT="$PWD/models/production/best_model.pt" ./
 
 가중치가 없으면 `run_live.sh`는 수신·건강 모니터링 경로만 시작하고 `fall.state=model_unavailable`을 기록합니다. 이 상태는 앱에 '확인 필요'로 전달됩니다. 실제 보드의 노드 ID와 `RUVIEW_NODES`가 일치해야 합니다.
 
-- v1 모델은 `python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all`로 UDP 5005 패킷을 받아 낙상 확률을 콘솔에 출력합니다. 서버로 전달하는 경로는 없습니다.
+- v1 모델은 `python -m hanium_fall_v1.realtime_inference --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all`로 UDP 5005 패킷을 받아 낙상 확률을 콘솔에 출력합니다.
 - 센서 수신만 눈으로 확인하려면 [CSI 파형 도구](../edge_ai/tools/README.md)를 씁니다(`python3 -m pip install -r tools/requirements.txt` 후 `python3 -m tools.csi_ws_bridge`).
 - v1 실시간 추론과 CSI 파형 도구는 `run_live.sh`와 같은 UDP 5005를 받으므로 하나씩 실행합니다.
-- [실측 검증 결과](../experiments/MEASURED_RESULTS.md)에서 v1·v2 모두 처음 보는 녹화와 다른 날의 데이터에 일반화되지 않았으므로, 실시간 연결 시연은 데이터 흐름 확인으로 기록합니다.
 
 ### 터미널 E: 추론 결과 전달
 
@@ -148,7 +147,7 @@ python3 app/server/jetson_edge_client.py live-status \
   --room-x 0.35 --room-y 0.45
 ```
 
-- `--room-x`, `--room-y`는 운영자가 지정한 설치 위치이며 모델이 추정한 사람 좌표가 아닙니다.
+- `--room-x`, `--room-y`는 도면에 표시할 감시 방의 설치 위치(0–1 정규화 좌표)입니다.
 - `live-status`는 `source: jetson_orin`으로 보냅니다. `unix_time`이 없거나 `--max-age`(기본 10초)보다 오래된 결과는 전달하지 않고, `[stale]` 경고를 출력한 뒤 `status: unknown`을 한 번 보냅니다. Jetson과 PC 시계가 다르면 시계를 맞추거나 `--max-age 0`을 씁니다.
 - 로컬 서버를 `HANIUM_API_TOKEN`으로 실행했다면 같은 환경 변수(또는 `--server-token`)를 지정합니다.
 - 실제 시연에서는 새 CSI 입력, `latest_status.json`의 `unix_time`, `fall.state`, 서버 반영, 앱 표시를 같은 시간대에 확인합니다.
@@ -195,15 +194,16 @@ GitHub Release `dataset-v1.0`에서 받아 [`SHA256SUMS`](../dataset/SHA256SUMS)
 ### 결과 재현
 
 ```bash
-cd edge_ai
-python -m hanium_fall_v1.evaluate --weights hanium_fall_v1/weights/team_v1_0717.pth --channels all
-cd ..
-python experiments/run_v1_experiments.py
+python dataset/tools/download.py                        # 학습 윈도우 NPZ (189MB)
+python experiments/run_v1_experiments.py                # v1 학습·평가 (CPU 약 7분)
+python -m pip install -r experiments/requirements.txt   # 그림용 matplotlib
+python experiments/plot_figures.py                      # 데이터셋·결과 그림
 ```
 
-- 첫 명령은 팀 가중치를 윈도우 2,217개 전체에 적용합니다(CPU 약 30초). 결과는 `experiments/results/v1/team_v1_0717.json`과 같아야 합니다.
-- `run_v1_experiments.py`는 공개한 v1 결과 전체를 다시 만들며(CPU 약 15분) `experiments/results/v1/`을 덮어씁니다. 일부만 돌리려면 `--only temporal_lltf`처럼 실행 이름을 지정합니다.
-- v2 파이프라인, 신호 진단, 결과 표·그림은 [실측 데이터 검증 결과의 재현 절차](../experiments/MEASURED_RESULTS.md#재현)를 따릅니다.
+- `run_v1_experiments.py`는 v1 1D-CNN 모델을 라벨별 층화 윈도우 무작위 80/20 분할로 5회 반복 학습·평가합니다. 1·2차 수집(07-08·07-09) 1,019개 윈도우는 `experiments/results/v1/b1_random/`, 전체 2,217개 윈도우는 `experiments/results/v1/random_all/`에 덮어씁니다. 하나만 돌리려면 `--only b1_random`처럼 실행 이름을 지정합니다.
+- 결과 폴더마다 `summary.json`(평균·표준편차·실행 환경), `runs.json`(반복별 지표), `predictions.csv`(윈도우별 낙상 확률)가 있습니다. 공개한 결과는 기본값 `--threads 2`로 만들었으며, 스레드 수를 바꾸면 소수 셋째 자리에서 차이가 날 수 있습니다.
+- `plot_figures.py`는 데이터셋 구성 그림과 결과 그림(`experiments/results/figures/v1_results.png`)을 그립니다.
+- 결과 표와 설명은 [실측 데이터 학습 결과](../experiments/MEASURED_RESULTS.md)에 있습니다.
 
 ### v2 체크포인트 평가
 
@@ -224,10 +224,9 @@ python3 -m hanium_fall_v2.acceptance_check reports/test_metrics.json
 | 구분 | 확인할 내용 |
 |---|---|
 | 입력 출처 | 실제 CSI 추론(`jetson_orin`)인지 `once`·`sequence` 예시 입력(`scripted_demo`, 앱의 '시연 입력' 칩)인지 |
-| 위치 출처 | 지정한 설치 좌표인지 별도 위치 추정 결과인지 |
 | 호흡 | 측정값이 없을 때 '측정 대기'로 표시되는지 |
 | 모델·신호 상태 | 모델 미설치·판단 불가가 '확인 필요'로 표시되는지, `live-status`의 `[stale]` 경고가 있었는지 |
 | 지연 | 낙상 동작 시작·판정·서버 수신·앱 표시 시각을 구분했는지 |
 | 긴급 대응 | 실제 신고 대신 전화 앱 연결까지만 확인했는지 |
 
-입력이 끊기면 서버는 마지막 상태를 유지하며, 오래된 추론 결과는 `live-status`만 걸러 `unknown`으로 알립니다. 남은 보완 항목은 [구현 대조표](IMPLEMENTATION_STATUS.md#우선-보완할-구현-항목), 실환경 평가 방법은 [평가 절차](validation/EVALUATION_PROTOCOL.md)에 있습니다.
+입력이 끊기면 서버는 마지막 상태를 유지하며, 오래된 추론 결과는 `live-status`만 걸러 `unknown`으로 알립니다. 기능별 구현 내용은 [기능별 구현 현황](IMPLEMENTATION_STATUS.md), 실환경 평가 방법은 [평가 절차](validation/EVALUATION_PROTOCOL.md)에 있습니다.

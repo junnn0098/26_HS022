@@ -1,4 +1,4 @@
-"""1D-CNN used by the team for the report's fall-detection results.
+"""v1 1D-CNN fall detector (134-channel x 500-frame input, fall / non-fall).
 
 The layer names and shapes must stay identical to the team checkpoints
 (`weights/*.pth`); any change breaks `load_state_dict`.
@@ -14,7 +14,7 @@ FALL_INDEX = 0  # softmax[:, 0] is the fall probability, softmax[:, 1] is non-fa
 
 
 class CSI1DCNN(nn.Module):
-    """Input (batch, 134, 500) -> logits (batch, 2). About 66k parameters."""
+    """Input (batch, 134, 500) -> logits (batch, 2)."""
 
     def __init__(self, in_channels: int = IN_CHANNELS, num_classes: int = 2, width: int = 32):
         super().__init__()

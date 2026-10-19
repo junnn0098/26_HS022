@@ -21,18 +21,19 @@ from labels import LABELS, anonymize
 
 KST = timezone(timedelta(hours=9))
 
-# (라벨표, 날짜 세션, 팀 내부 차수 이름, 학습 윈도우 배치)
+# (전체 녹화 라벨표, 학습 윈도우 배치 이름, 학습에 쓴 녹화만 남긴 라벨표 또는 None=전부 사용)
 LABEL_TABLES = [
     ("labels.csv", "b1_0708_0709", None),
     ("labels_batch3.csv", "b2_0715", "labels_batch3_filtered.csv"),
     ("labels_3rd.csv", "b3_0724", None),
     ("labels_4th.csv", "b4_0728", None),
 ]
+# 녹화 날짜 → 팀 내부 차수 이름
 TEAM_ROUND = {"2026-07-08": "1차", "2026-07-09": "2차", "2026-07-15": "낙상 보강", "2026-07-24": "3차", "2026-07-28": "4차"}
 
 
 def header_fields(iq_hex: str) -> tuple[int, int, int]:
-    """iq_hex는 ADR-018 패킷의 8번째 바이트부터다: 주파수(4) 시퀀스(4) RSSI(1) 잡음(1) ..."""
+    """iq_hex는 ADR-018 패킷의 오프셋 8(9번째 바이트, 주파수)부터다: 주파수(4) 순번(4) RSSI(1) 잡음 하한(1) ..."""
     raw = bytes.fromhex(iq_hex[:20])
     frequency = int.from_bytes(raw[0:4], "little")
     rssi = int.from_bytes(raw[8:9], "little", signed=True)

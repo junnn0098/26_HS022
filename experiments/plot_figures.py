@@ -1,4 +1,4 @@
-"""Draw the dataset and result figures used in README / dataset card / results report.
+"""Draw the dataset composition figure and the v1 measured-result figure.
 
   python experiments/plot_figures.py
 """
@@ -70,44 +70,38 @@ def composition(rows: list[dict], out: Path) -> None:
     plt.close(fig)
 
 
-def protocol_comparison(out: Path) -> None:
-    results = ROOT / "experiments" / "results"
+V1_RUNS = [("b1_random", "1·2차 수집 (07-08·07-09) 1,019개", "#2a78d6"),
+           ("random_all", "전체 (07-08–07-28) 2,217개", "#eb6834")]
+V1_METRICS = [("recall", "낙상 재현율"), ("precision", "정밀도"), ("f1", "F1"), ("auroc", "AUROC")]
 
-    def summary(path: str) -> dict:
-        return json.loads((results / path / "summary.json").read_text(encoding="utf-8"))["summary"]
 
-    later = json.loads((results / "v1" / "team_v1_0717_later.json").read_text(encoding="utf-8"))["overall"]
-    rows = [
-        ("v1\n윈도우 무작위 분할", summary("v1/random_all")),
-        ("v1\n헤더 5채널만 입력\n(누수 점검)", summary("v1/random_non_csi")),
-        ("v1\n녹화 단위 분할", summary("v1/recording_all")),
-        ("v1\n날짜 분할", summary("v1/temporal_all")),
-        ("v2\n녹화 단위 분할", summary("v2_measured/recording")),
-        ("v2\n날짜 분할", summary("v2_measured/temporal")),
-    ]
-    names = [name for name, _ in rows] + ["팀 가중치(07-17)\n이후 수집일에 적용"]
-    recall = [m["recall"]["mean"] for _, m in rows] + [later["tp"] / (later["tp"] + later["fn"])]
-    auroc = [m["auroc"]["mean"] for _, m in rows] + [later["auroc"]]
-    x = np.arange(len(names))
-    fig, ax = plt.subplots(figsize=(11, 4.0))
-    ax.bar(x - 0.19, recall, width=0.36, color="#2a78d6", label="낙상 재현율 (임계값 0.5)", edgecolor=SURFACE, linewidth=2)
-    ax.bar(x + 0.19, auroc, width=0.36, color="#eb6834", label="AUROC", edgecolor=SURFACE, linewidth=2)
-    for i in range(len(names)):
-        ax.text(x[i] - 0.19, recall[i] + 0.02, f"{recall[i]:.2f}", ha="center", fontsize=8, color=INK_2)
-        ax.text(x[i] + 0.19, auroc[i] + 0.02, f"{auroc[i]:.2f}", ha="center", fontsize=8, color=INK_2)
-    ax.axhline(0.5, color=INK_2, linestyle=(0, (4, 3)), linewidth=1, label="무작위 추측 수준 (AUROC 0.5)")
-    ax.axvspan(-0.5, 1.5, color="#f0efec", zorder=-1)
-    ax.text(0.5, 1.09, "같은 녹화가 학습·시험에 함께 들어감", ha="center", fontsize=8, color=INK_2)
-    ax.text(4.0, 1.09, "처음 보는 녹화·날짜로 시험", ha="center", fontsize=8, color=INK_2)
-    ax.set_xticks(x, names, fontsize=8.5, linespacing=1.3)
-    ax.set_ylim(0, 1.15)
+def v1_results(out: Path) -> None:
+    results = ROOT / "experiments" / "results" / "v1"
+    x = np.arange(len(V1_METRICS))
+    width = 0.36
+    fig, ax = plt.subplots(figsize=(7.2, 3.6))
+    for i, (name, title, color) in enumerate(V1_RUNS):
+        summary = json.loads((results / name / "summary.json").read_text(encoding="utf-8"))["summary"]
+        mean = np.array([summary[key]["mean"] for key, _ in V1_METRICS])
+        std = np.array([summary[key]["std"] for key, _ in V1_METRICS])
+        offset = (i - 0.5) * (width + 0.02)
+        ax.bar(x + offset, mean, width=width, color=color, label=title, edgecolor=SURFACE, linewidth=2)
+        ax.errorbar(x + offset, mean, yerr=std, fmt="none", ecolor=INK_2, elinewidth=1, capsize=3)
+        for j in range(len(x)):
+            ax.text(x[j] + offset, mean[j] + std[j] + 0.015, f"{mean[j]:.3f}", ha="center", va="bottom",
+                    fontsize=8.5, color=INK_2)
+    ax.set_xticks(x, [label for _, label in V1_METRICS])
+    ax.set_ylim(0, 1.12)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
-    for side in ("top", "right"):
+    for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
-    ax.legend(frameon=False, ncols=3, loc="lower left", bbox_to_anchor=(0.0, 1.07), fontsize=9)
-    ax.set_title("평가 방식별 낙상 감지 성능 (실측 2,217개 윈도우)", loc="left", fontsize=11, pad=40)
+    ax.tick_params(axis="y", length=0)
+    ax.legend(ncols=2, frameon=False, loc="lower left", bbox_to_anchor=(0.0, 1.0), fontsize=9)
+    ax.text(0, 1.115, "윈도우 무작위 80/20 분할 · 시드 5회 평균 ± 표준편차 · 낙상 판정 임계값 0.5",
+            transform=ax.transAxes, fontsize=9, color=INK_2)
+    ax.set_title("v1 1D-CNN 낙상 감지 성능", loc="left", fontsize=11, pad=36)
     fig.savefig(out)
     plt.close(fig)
 
@@ -118,10 +112,9 @@ def main() -> None:
     figures = ROOT / "dataset" / "figures"
     figures.mkdir(parents=True, exist_ok=True)
     composition(rows, figures / "composition.png")
-    if (ROOT / "experiments" / "results" / "v2_measured" / "temporal" / "summary.json").exists():
-        target = ROOT / "experiments" / "results" / "figures"
-        target.mkdir(parents=True, exist_ok=True)
-        protocol_comparison(target / "protocol_comparison.png")
+    target = ROOT / "experiments" / "results" / "figures"
+    target.mkdir(parents=True, exist_ok=True)
+    v1_results(target / "v1_results.png")
     print("figures written")
 
 

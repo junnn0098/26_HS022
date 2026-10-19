@@ -20,11 +20,11 @@ REAL_SENSOR_ONLY=true node app/server/local_server.js
 
 서버는 Node.js 기본 모듈만 사용하므로 이 경로에 `npm install`이나 FastAPI 설치는 필요하지 않습니다(`package.json`은 CommonJS 모드 고정용이며 의존성이 없습니다). `/admin`은 시연 관리자 화면, `/health`는 서버 상태입니다. 전체 순서는 [실행 안내](../../docs/RUNBOOK.md)를 참고하세요.
 
-`REAL_SENSOR_ONLY=true`는 자동 모의 이동을 멈춥니다. 설정하지 않으면 자동 모의 이동과 약 45초마다 모의 낙상(source `mock`)이 생성되며, 서버 시작 로그의 `Mode:` 줄에 현재 모드가 표시됩니다. 호흡값이 없으면 서버는 값을 채우지 않고 `breathingRate: null`로 전달합니다(앱 '측정 대기'). 입력이 끊기면 서버는 마지막 상태를 유지합니다. 실행 중인 `jetson_edge_client.py live-status`는 10초 넘게 갱신되지 않은 추론 결과를 `status: unknown`으로 알리지만, 클라이언트 자체가 멈추면 마지막 상태가 그대로 남습니다. 현재 동작과 개선 항목은 [구현 대조표](../../docs/IMPLEMENTATION_STATUS.md#우선-보완할-구현-항목)에 기록했습니다.
+`REAL_SENSOR_ONLY=true`는 자동 모의 이동을 멈춥니다. 설정하지 않으면 자동 모의 이동과 약 45초마다 모의 낙상(source `mock`)이 생성되며, 서버 시작 로그의 `Mode:` 줄에 현재 모드가 표시됩니다. 호흡값이 없으면 서버는 값을 채우지 않고 `breathingRate: null`로 전달합니다(앱 '측정 대기'). 입력이 끊기면 서버는 마지막 상태를 유지합니다. 실행 중인 `jetson_edge_client.py live-status`는 10초 넘게 갱신되지 않은 추론 결과를 `status: unknown`으로 알리지만, 클라이언트 자체가 멈추면 마지막 상태가 그대로 남습니다. 기능별 동작은 [기능별 구현 현황](../../docs/IMPLEMENTATION_STATUS.md)에 정리했습니다.
 
 [`legacy_fastapi_prototype/`](legacy_fastapi_prototype/)(FastAPI `main.py`·`routers/`·`services/`·`models/`, `dev_mock_server.py`)는 초기 프로토타입으로 현재 사용하지 않습니다.
 
-설정·보호자·알림은 `dev_state.json`(Git 제외)에 저장됩니다. 로그인은 역할 선택용이며, 서버 API 보호는 아래 설정으로 켭니다.
+설정·보호자·알림은 `dev_state.json`(Git 제외)에 저장됩니다. 서버 API 보호는 아래 설정으로 켭니다.
 
 ## 보안·네트워크 설정
 
