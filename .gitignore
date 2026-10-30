@@ -23,6 +23,8 @@ dataset/cache/
 *.mov
 *.mkv
 *.webm
+# 공개용 시연 영상만 예외로 포함
+!docs/final/demo.mp4
 google-services.json
 GoogleService-Info.plist
 *firebase*credentials*.json
