@@ -14,3 +14,5 @@
 *.npz binary
 *.wav binary
 *.ico binary
+*.pdf binary
+*.mp4 binary
